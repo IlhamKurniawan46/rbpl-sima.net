@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.installations_and_tickets (
   customer_id   UUID          NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
   technician_id UUID          REFERENCES public.profiles(id) ON DELETE SET NULL,
   description   TEXT,
+  image_url     TEXT,
   status        ticket_status NOT NULL DEFAULT 'submitted',
   scheduled_at  TIMESTAMPTZ,
   completed_at  TIMESTAMPTZ,
@@ -376,6 +377,29 @@ CREATE POLICY "bills: customer pay"
 CREATE POLICY "bills: admin delete"
   ON public.bills_and_payments FOR DELETE
   USING (public.get_my_role() = 'admin');
+
+-- ---------------------------------------------------------------------------
+-- STORAGE CONFIGURATION (ticket-attachments)
+-- ---------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('ticket-attachments', 'ticket-attachments', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Enable RLS for storage.objects if not already enabled (by default enabled in supabase)
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Allow authenticated users to upload files to 'ticket-attachments'
+CREATE POLICY "Allow authenticated upload to ticket-attachments"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'ticket-attachments'
+    AND auth.role() = 'authenticated'
+  );
+
+-- Allow public access to view files in 'ticket-attachments'
+CREATE POLICY "Allow public read of ticket-attachments"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'ticket-attachments');
 
 -- =============================================================================
 -- END OF SCHEMA

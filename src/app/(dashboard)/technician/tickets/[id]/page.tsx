@@ -17,6 +17,7 @@ interface TicketRecord {
   type: string;
   status: TicketStatus;
   description: string | null;
+  image_url: string | null;
   scheduled_date: string | null;
   completed_at: string | null;
   created_at: string;
@@ -58,6 +59,7 @@ export default function TechTicketDetailPage({ params }: { params: Promise<{ id:
           type,
           status,
           description,
+          image_url,
           scheduled_date,
           completed_at,
           created_at,
@@ -175,6 +177,19 @@ export default function TechTicketDetailPage({ params }: { params: Promise<{ id:
             <p className="text-xs text-text-muted font-medium mb-1">Deskripsi:</p>
             <p className="text-sm text-text-primary whitespace-pre-wrap">{ticket.description || 'Tidak ada deskripsi.'}</p>
           </div>
+          {ticket.image_url && (
+            <div className="mt-3 p-3 bg-surface-alt rounded-xl space-y-2">
+              <p className="text-xs text-text-muted font-medium">Bukti Gambar:</p>
+              <div className="relative rounded-lg overflow-hidden border border-border-light bg-white aspect-video max-w-sm flex items-center justify-center">
+                <img
+                  src={ticket.image_url}
+                  alt="Bukti Laporan"
+                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => window.open(ticket.image_url!, '_blank')}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border-light">

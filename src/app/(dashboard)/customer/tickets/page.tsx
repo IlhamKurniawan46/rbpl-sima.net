@@ -16,6 +16,7 @@ interface TicketRecord {
   type: string;
   status: string;
   description: string | null;
+  image_url: string | null;
   scheduled_date: string | null;
   completed_at: string | null;
   created_at: string;
@@ -59,6 +60,7 @@ export default function CustomerTicketsPage() {
           type,
           status,
           description,
+          image_url,
           scheduled_date,
           completed_at,
           created_at,
@@ -255,6 +257,23 @@ export default function CustomerTicketsPage() {
                 {selectedTicket.description || 'Tidak ada deskripsi masalah.'}
               </p>
             </div>
+
+            {/* Attachment Image */}
+            {selectedTicket.image_url && (
+              <div className="space-y-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">
+                  Bukti Gambar
+                </span>
+                <div className="relative rounded-2xl overflow-hidden border border-border-light bg-surface-alt aspect-video flex items-center justify-center">
+                  <img
+                    src={selectedTicket.image_url}
+                    alt="Bukti Laporan"
+                    className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                    onClick={() => window.open(selectedTicket.image_url!, '_blank')}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Assigned Technician */}
             {selectedTicket.technician ? (

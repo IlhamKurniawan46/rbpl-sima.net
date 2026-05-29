@@ -14,6 +14,7 @@ export default function NewTicketPage() {
   const { profile } = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [form, setForm] = useState({ subject: '', description: '', priority: 'medium' });
 
   const update = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
@@ -40,6 +41,29 @@ export default function NewTicketPage() {
         throw new Error(custErr?.message || 'Data pelanggan tidak ditemukan.');
       }
 
+      let publicUrl = '';
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${custData.id}/${fileName}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase
+          .storage
+          .from('ticket-attachments')
+          .upload(filePath, imageFile);
+
+        if (uploadError) {
+          throw new Error('Gagal mengunggah gambar: ' + uploadError.message);
+        }
+
+        const { data: { publicUrl: retrievedUrl } } = supabase
+          .storage
+          .from('ticket-attachments')
+          .getPublicUrl(filePath);
+
+        publicUrl = retrievedUrl;
+      }
+
       // B. Insert the new row into installations_and_tickets
       const insertPayload: any = {
         customer_id: custData.id,
@@ -47,6 +71,10 @@ export default function NewTicketPage() {
         status: 'submitted', // CRITICAL: Must match database default/enum for ticket_status
         description: form.description,
       };
+
+      if (publicUrl) {
+        insertPayload.image_url = publicUrl;
+      }
 
       // If the database happens to have a title/subject column, we include it, 
       // but we safely add it to prevent schema errors if not supported.
@@ -106,6 +134,22 @@ export default function NewTicketPage() {
             { value: 'critical', label: 'Kritis — Layanan mati total' },
           ]}
         />
+        
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-text-primary">
+            Upload Bukti Gambar
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setImageFile(file);
+            }}
+            className="w-full text-xs text-text-muted border border-border rounded-xl p-2.5 bg-white file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-maroon-50 file:text-maroon-700 hover:file:bg-maroon-100 transition-all cursor-pointer"
+          />
+        </div>
+
         <div className="pt-2">
           <ActionButton type="submit" fullWidth loading={loading}>
             Kirim Laporan
