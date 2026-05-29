@@ -51,7 +51,14 @@ export default function RegisterPage() {
       showToast('Registrasi berhasil! Silakan masuk.', 'success');
       router.push('/login');
     } catch (err: any) {
-      setError(err.message || 'Registrasi gagal. Silakan coba lagi.');
+      const msg: string = err.message || '';
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
+        setError('Email ini sudah terdaftar. Silakan gunakan email lain atau langsung masuk.');
+      } else if (msg.toLowerCase().includes('password')) {
+        setError('Password terlalu lemah. Gunakan minimal 6 karakter.');
+      } else {
+        setError('Registrasi gagal. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
     }
