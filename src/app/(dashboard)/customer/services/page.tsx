@@ -307,7 +307,15 @@ export default function CustomerServicesPage() {
             {/* QR Mock code */}
             <div className="border border-border-light p-4 rounded-2xl max-w-[200px] mx-auto bg-surface-alt flex flex-col items-center justify-center gap-2">
               <div className="w-36 h-36 bg-gray-200 rounded-lg flex items-center justify-center font-bold text-xs text-text-muted">
-                [QRIS MOCK CODE]
+                {/* QR Code Nyata Menggunakan API Generator */}
+                <div className="border border-border-light p-4 rounded-2xl max-w-[200px] mx-auto bg-white flex flex-col items-center justify-center gap-2">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SIMANET_${selectedPkg?.name || 'PACKAGE'}_${profile?.id || 'USER'}`}
+                    alt="QRIS Simanet"
+                    className="w-36 h-36 mx-auto object-contain bg-white p-1 rounded-lg border border-border-light shadow-sm"
+                    loading="lazy"
+                  />
+                </div>
               </div>
               <p className="text-[10px] text-text-muted font-semibold tracking-wider">QRIS SIMA.NET INTERNET</p>
             </div>

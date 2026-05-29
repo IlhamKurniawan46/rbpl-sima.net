@@ -22,7 +22,7 @@ interface CustomerRow {
   created_at: string;
   profile: { full_name: string; phone: string | null } | null;
   isp: { name: string; speed_limit: string } | null;
-  ticket: { technician_id: string | null; scheduled_at: string | null } | null;
+  ticket: { technician_id: string | null; scheduled_date: string | null } | null;
 }
 
 interface Technician {
@@ -63,7 +63,7 @@ function AssignModal({ customer, technicians, onClose, onSaved }: AssignModalPro
   const { showToast } = useToast();
   const [techId, setTechId] = useState(customer.ticket?.technician_id || '');
   const [date, setDate] = useState(
-    customer.ticket?.scheduled_at ? customer.ticket.scheduled_at.slice(0, 10) : ''
+    customer.ticket?.scheduled_date ? customer.ticket.scheduled_date.slice(0, 10) : ''
   );
   const [saving, setSaving] = useState(false);
 
@@ -81,8 +81,7 @@ function AssignModal({ customer, technicians, onClose, onSaved }: AssignModalPro
         .eq('id', customer.id);
       if (custErr) throw custErr;
 
-      // 2. Upsert an installations_and_tickets row of type 'new_installation'
-      //    We match on customer_id + type to avoid duplicate rows
+      // 2. Upsert into installations_and_tickets table using standard Supabase client
       const { error: tickErr } = await supabase
         .from('installations_and_tickets')
         .upsert(
@@ -90,14 +89,12 @@ function AssignModal({ customer, technicians, onClose, onSaved }: AssignModalPro
             customer_id: customer.id,
             type: 'new_installation',
             technician_id: techId,
-            scheduled_at: new Date(date).toISOString(),
+            scheduled_date: date,
             status: 'in_progress',
           },
           { onConflict: 'customer_id,type' }
         );
-      // If there's a unique constraint violation we fall through — it means it's already set
-      // (schema might not have this unique constraint yet, so we handle gracefully)
-      if (tickErr && tickErr.code !== '23505') throw tickErr;
+      if (tickErr) throw tickErr;
 
       showToast('Teknisi berhasil ditugaskan!', 'success');
       onSaved(customer.id, techId, date);
@@ -115,7 +112,7 @@ function AssignModal({ customer, technicians, onClose, onSaved }: AssignModalPro
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -152,7 +149,7 @@ function AssignModal({ customer, technicians, onClose, onSaved }: AssignModalPro
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pb-28">
           {/* Technician select */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-text-heading flex items-center gap-1.5">
@@ -224,7 +221,7 @@ export default function AdminInstallationsPage() {
             created_at,
             profile:profiles!customers_profile_id_fkey(full_name, phone),
             isp:isps(name, speed_limit),
-            ticket:installations_and_tickets(technician_id, scheduled_at)
+            ticket:installations_and_tickets(technician_id, scheduled_date)
           `)
           .in('status', ['pending', 'active'])
           .order('created_at', { ascending: true }),
@@ -269,7 +266,7 @@ export default function AdminInstallationsPage() {
           ? {
               ...c,
               managed_by: techId,
-              ticket: { technician_id: techId, scheduled_at: new Date(date).toISOString() },
+              ticket: { technician_id: techId, scheduled_date: date },
             }
           : c
       )
@@ -304,7 +301,7 @@ export default function AdminInstallationsPage() {
           <div className="space-y-3 stagger-children">
             {filtered.map((c) => {
               const assignedTech = getTechName(c.ticket?.technician_id || null);
-              const scheduledDate = c.ticket?.scheduled_at;
+              const scheduledDate = c.ticket?.scheduled_date;
               const isAssigned = !!assignedTech;
 
               return (
@@ -387,6 +384,8 @@ export default function AdminInstallationsPage() {
             })}
           </div>
         )}
+        {/* Spacer: pushes last card above fixed bottom nav */}
+        <div className="h-32 w-full block" aria-hidden="true" />
       </div>
 
       {/* Assignment Modal */}

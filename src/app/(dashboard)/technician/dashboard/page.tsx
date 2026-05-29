@@ -7,50 +7,71 @@ import ListCard from '@/components/ui/ListCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
-import { getInitials } from '@/lib/utils/formatters';
-import { Wrench, CheckCircle, Clock, MapPin, Wifi, Zap } from 'lucide-react';
+import { Wifi, Clock, CheckCircle, Wrench } from 'lucide-react';
 import Link from 'next/link';
 
-interface PendingTask {
+interface DashboardTask {
   id: string;
+  type: string;
   status: string;
-  installation_address: string;
-  installation_area: string | null;
-  profile: { full_name: string } | null;
-  isp: { name: string; speed_limit: string } | null;
+  scheduled_date: string | null;
+  customer: {
+    id: string;
+    installation_address: string;
+    installation_area: string | null;
+    profile: {
+      full_name: string;
+      phone: string | null;
+    } | null;
+    isp: {
+      name: string;
+      speed_limit: string;
+    } | null;
+  } | null;
 }
 
 export default function TechDashboard() {
   const { profile } = useAuth();
-  const [pending, setPending] = useState<PendingTask[]>([]);
+  const [pending, setPending] = useState<DashboardTask[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
-      if (!profile) return;
+      if (!profile?.id) return;
       try {
         const supabase = createClient();
 
         const { data, error } = await supabase
-          .from('customers')
+          .from('installations_and_tickets')
           .select(`
             id,
+            type,
             status,
-            installation_address,
-            installation_area,
-            profile:profiles!customers_profile_id_fkey(full_name),
-            isp:isps(name, speed_limit)
+            scheduled_date,
+            customer_id,
+            customer:customers (
+              id,
+              installation_address,
+              installation_area,
+              profile:profiles!customers_profile_id_fkey (
+                full_name,
+                phone
+              ),
+              isp:isps (
+                name,
+                speed_limit
+              )
+            )
           `)
-          .in('status', ['pending', 'active'])
-          .order('created_at', { ascending: true });
+          .eq('technician_id', profile.id)
+          .eq('type', 'new_installation');
 
         if (error) throw error;
 
         const all = (data as any[]) || [];
-        const assigned = all.filter((t) => t.managed_by === profile.id);
-        setPending(all.filter((t) => t.status === 'pending'));
-        setCompletedCount(all.filter((t) => t.status === 'active' && t.managed_by === profile.id).length);
+        setPending(all.filter((t) => t.status === 'in_progress'));
+        setCompletedCount(all.filter((t) => t.status === 'completed').length);
       } catch (err: any) {
         console.error('Tech dashboard error:', err.message);
       } finally {
@@ -62,7 +83,7 @@ export default function TechDashboard() {
 
   return (
     <>
-      <TopBar title="Dashboard Teknisi" />
+      <TopBar title="Dashboard" />
       <div className="p-4 space-y-5">
         <div className="animate-fade-in">
           <h2 className="text-lg font-bold text-text-heading">
@@ -96,25 +117,33 @@ export default function TechDashboard() {
             </div>
           ) : (
             <div className="space-y-2.5 stagger-children">
-              {pending.slice(0, 4).map((task) => (
-                <ListCard
-                  key={task.id}
-                  href="/technician/tasks"
-                  avatar={
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                      <Wifi size={18} />
-                    </div>
-                  }
-                  title={task.profile?.full_name || '—'}
-                  subtitle={`${task.isp?.name || ''} · ${task.isp?.speed_limit || ''} · ${task.installation_area || ''}`}
-                  trailing={
-                    <StatusBadge
-                      label="Menunggu"
-                      colorClass="bg-gold-50 text-gold-700 border-gold-200"
-                    />
-                  }
-                />
-              ))}
+              {pending && pending.slice(0, 4).map((task) => {
+                console.log("Debug Tech Item:", task);
+                const customerName = 
+                  task.customer?.profile?.full_name || 
+                  (task.customer?.profile as any)?.name || 
+                  (task.customer?.profile as any)?.username || 
+                  'Pelanggan Baru';
+                return (
+                  <ListCard
+                    key={task.id}
+                    href={`/technician/tasks?id=${task.id}`}
+                    avatar={
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Wifi size={18} />
+                      </div>
+                    }
+                    title={customerName}
+                    subtitle={`${task.customer?.isp?.name || ''} · ${task.customer?.isp?.speed_limit || ''} · ${task.customer?.installation_area || ''}`}
+                    trailing={
+                      <StatusBadge
+                        label="Menunggu"
+                        colorClass="bg-gold-50 text-gold-700 border-gold-200"
+                      />
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>
