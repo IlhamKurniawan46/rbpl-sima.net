@@ -1,15 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import SearchBar from '@/components/ui/SearchBar';
 import FilterChips from '@/components/ui/FilterChips';
 import ListCard from '@/components/ui/ListCard';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { CUSTOMER_STATUS_LABELS, CUSTOMER_STATUS_COLORS } from '@/lib/utils/constants';
 import { getInitials } from '@/lib/utils/formatters';
 import { createClient } from '@/lib/supabase/client';
-import type { Customer } from '@/lib/types/database';
+
+interface CustomerRow {
+  id: string;
+  status: string;
+  installation_address: string;
+  installation_area: string | null;
+  profile: { full_name: string; phone: string | null } | null;
+  isp: { name: string; speed_limit: string } | null;
+  managed_by_profile: { full_name: string } | null;
+}
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'Semua' },
@@ -18,10 +26,22 @@ const FILTER_OPTIONS = [
   { value: 'inactive', label: 'Nonaktif' },
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Aktif',
+  pending: 'Menunggu',
+  inactive: 'Nonaktif',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  active: 'bg-green-50 text-green-700 border-green-200',
+  pending: 'bg-gold-50 text-gold-700 border-gold-200',
+  inactive: 'bg-gray-50 text-gray-600 border-gray-200',
+};
+
 export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -33,15 +53,12 @@ export default function CustomersPage() {
           .from('customers')
           .select(`
             id,
-            profile_id,
-            managed_by,
-            isp_id,
+            status,
             installation_address,
             installation_area,
-            status,
-            created_at,
-            updated_at,
-            profile:profiles!customers_profile_id_fkey(id, full_name, phone, role, created_at)
+            profile:profiles!customers_profile_id_fkey(full_name, phone),
+            isp:isps(name, speed_limit),
+            managed_by_profile:profiles!customers_managed_by_fkey(full_name)
           `)
           .order('created_at', { ascending: false });
 
@@ -61,11 +78,12 @@ export default function CustomersPage() {
   const filtered = customers.filter((c) => {
     const fullName = c.profile?.full_name || '';
     const address = c.installation_address || '';
+    const isp = c.isp?.name || '';
     const matchSearch =
       !search ||
       fullName.toLowerCase().includes(search.toLowerCase()) ||
-      address.toLowerCase().includes(search.toLowerCase());
-    
+      address.toLowerCase().includes(search.toLowerCase()) ||
+      isp.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'all' || c.status === filter;
     return matchSearch && matchFilter;
   });
@@ -76,7 +94,7 @@ export default function CustomersPage() {
       <div className="p-4 space-y-4">
         <SearchBar placeholder="Cari pelanggan..." value={search} onChange={setSearch} />
         <FilterChips options={FILTER_OPTIONS} selected={filter} onChange={setFilter} />
-        
+
         <div className="space-y-2.5 stagger-children">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 text-text-muted gap-2">
@@ -91,7 +109,7 @@ export default function CustomersPage() {
           ) : filtered.length === 0 ? (
             <div className="bg-white rounded-2xl p-8 border border-border-light text-center">
               <p className="text-sm font-semibold text-text-heading">Belum ada pelanggan ditemukan</p>
-              <p className="text-xs text-text-muted mt-1">Gunakan kata kunci pencarian atau filter yang berbeda.</p>
+              <p className="text-xs text-text-muted mt-1">Coba ubah kata kunci atau filter pencarian.</p>
             </div>
           ) : (
             filtered.map((c) => (
@@ -103,9 +121,14 @@ export default function CustomersPage() {
                     {getInitials(c.profile?.full_name || '')}
                   </div>
                 }
-                title={c.profile?.full_name || ''}
-                subtitle={`${c.installation_area || 'Umum'} · ${c.installation_address}`}
-                trailing={<StatusBadge label={CUSTOMER_STATUS_LABELS[c.status]} colorClass={CUSTOMER_STATUS_COLORS[c.status]} />}
+                title={c.profile?.full_name || '—'}
+                subtitle={`${c.isp?.name || 'Tidak ada paket'} · ${c.installation_area || ''} · ${c.installation_address}`}
+                trailing={
+                  <StatusBadge
+                    label={STATUS_LABELS[c.status] || c.status}
+                    colorClass={STATUS_COLORS[c.status] || 'bg-gray-50 text-gray-600 border-gray-200'}
+                  />
+                }
                 showChevron
               />
             ))
