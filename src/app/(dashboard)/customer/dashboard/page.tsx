@@ -1,27 +1,57 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import StatCard from '@/components/ui/StatCard';
-import ListCard from '@/components/ui/ListCard';
 import StatusBadge from '@/components/ui/StatusBadge';
+import ActionButton from '@/components/ui/ActionButton';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCustomerByProfileId, getInvoicesForCustomer, getTicketsForCustomer, getInstallationsForCustomer } from '@/lib/mock-data';
-import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS, TICKET_STATUS_LABELS, TICKET_STATUS_COLORS } from '@/lib/utils/constants';
-import { formatCurrency, formatDateShort } from '@/lib/utils/formatters';
-import { Wifi, CreditCard, Ticket, Plus, AlertTriangle } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { formatCurrency } from '@/lib/utils/formatters';
+import { Wifi, CreditCard, Ticket, Plus, AlertTriangle, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+interface CustomerRecord {
+  id: string;
+  status: string;
+  installation_address: string;
+  installation_area: string | null;
+  isp: { name: string; speed_limit: string; price: number } | null;
+}
 
 export default function CustomerDashboard() {
   const { profile } = useAuth();
   const router = useRouter();
-  const customer = profile ? getCustomerByProfileId(profile.id) : null;
-  const invoices = customer ? getInvoicesForCustomer(customer.id) : [];
-  const tickets = customer ? getTicketsForCustomer(customer.id) : [];
-  const installations = customer ? getInstallationsForCustomer(customer.id) : [];
+  const [customer, setCustomer] = useState<CustomerRecord | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const activeService = installations.find((i) => i.status === 'success');
-  const latestInvoice = invoices[0];
-  const unpaidInvoices = invoices.filter((i) => i.status !== 'paid');
+  useEffect(() => {
+    async function fetchCustomer() {
+      if (!profile) return;
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('customers')
+          .select(`
+            id,
+            status,
+            installation_address,
+            installation_area,
+            isp:isps(name, speed_limit, price)
+          `)
+          .eq('profile_id', profile.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        setCustomer(data as any);
+      } catch (err: any) {
+        console.error('Failed to fetch customer record:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCustomer();
+  }, [profile]);
 
   return (
     <>
@@ -29,62 +59,80 @@ export default function CustomerDashboard() {
       <div className="p-4 space-y-5">
         {/* Greeting */}
         <div className="animate-fade-in">
-          <h2 className="text-lg font-bold text-text-heading">Halo, {profile?.full_name?.split(' ')[0]} 👋</h2>
+          <h2 className="text-lg font-bold text-text-heading">
+            Halo, {profile?.full_name?.split(' ')[0]} 👋
+          </h2>
           <p className="text-xs text-text-muted mt-0.5">Selamat datang kembali</p>
         </div>
 
-        {/* Active Service Card */}
-        {activeService && (
-          <div className="bg-maroon-600 rounded-2xl p-4 text-white animate-fade-in">
-            <div className="flex items-center gap-2 mb-2">
-              <Wifi size={18} />
-              <span className="text-xs font-medium opacity-80">Layanan Aktif</span>
-            </div>
-            <p className="text-xl font-bold">{activeService.package?.name}</p>
-            <p className="text-sm opacity-80 mt-0.5">{activeService.package?.speed_mbps} Mbps</p>
-            <div className="mt-3 pt-3 border-t border-white/20 flex justify-between items-center">
-              <span className="text-xs opacity-70">Biaya bulanan</span>
-              <span className="text-lg font-bold">{formatCurrency(activeService.package?.price_monthly || 0)}</span>
-            </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-8 text-text-muted gap-2">
+            <div className="w-7 h-7 rounded-full border-4 border-maroon-100 border-t-maroon-600 animate-spin" />
+            <p className="text-xs">Memuat data layanan...</p>
           </div>
-        )}
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3 stagger-children">
-          <StatCard icon={CreditCard} label="Belum Bayar" value={unpaidInvoices.length} color={unpaidInvoices.length > 0 ? 'gold' : 'green'} />
-          <StatCard icon={Ticket} label="Tiket Aktif" value={tickets.filter((t) => t.status !== 'resolved' && t.status !== 'closed').length} color="blue" />
-        </div>
-
-        {/* Overdue Warning */}
-        {invoices.some((i) => i.status === 'overdue') && (
-          <div className="p-3.5 bg-gold-50 border border-gold-200 rounded-2xl flex items-start gap-3 animate-fade-in">
-            <AlertTriangle size={18} className="text-gold-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-gold-700">Tagihan Jatuh Tempo</p>
-              <p className="text-xs text-gold-600 mt-0.5">Segera lakukan pembayaran untuk menghindari pemutusan layanan.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Latest Invoice */}
-        {latestInvoice && (
-          <div>
-            <h3 className="text-sm font-bold text-text-heading mb-2">Tagihan Terbaru</h3>
-            <button
-              onClick={() => router.push(`/customer/invoices/${latestInvoice.id}`)}
-              className="w-full bg-white rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border-light text-left active:scale-[0.98] transition-transform"
+        ) : customer ? (
+          <>
+            {/* Active/Pending Service Card */}
+            <div
+              className={`rounded-2xl p-4 text-white animate-fade-in ${
+                customer.status === 'active' ? 'bg-maroon-600' : 'bg-gold-500'
+              }`}
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-semibold text-text-heading">{latestInvoice.description}</p>
-                  <p className="text-xs text-text-muted mt-0.5">Jatuh tempo: {formatDateShort(latestInvoice.due_date)}</p>
-                </div>
-                <StatusBadge label={INVOICE_STATUS_LABELS[latestInvoice.status]} colorClass={INVOICE_STATUS_COLORS[latestInvoice.status]} />
+              <div className="flex items-center gap-2 mb-2">
+                <Wifi size={18} />
+                <span className="text-xs font-medium opacity-80">
+                  {customer.status === 'active' ? 'Layanan Aktif' : 'Menunggu Pemasangan'}
+                </span>
               </div>
-              <p className={`text-xl font-bold mt-2 ${latestInvoice.status === 'paid' ? 'text-green-600' : 'text-text-heading'}`}>
-                {formatCurrency(latestInvoice.amount)}
+              <p className="text-xl font-bold">{customer.isp?.name}</p>
+              <div className="flex items-center gap-1 mt-0.5 opacity-80">
+                <Zap size={14} />
+                <span className="text-sm">{customer.isp?.speed_limit}</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/20 flex justify-between items-center">
+                <span className="text-xs opacity-70">Biaya bulanan</span>
+                <span className="text-lg font-bold">
+                  {formatCurrency(customer.isp?.price || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Status info for pending */}
+            {customer.status === 'pending' && (
+              <div className="p-3.5 bg-gold-50 border border-gold-200 rounded-2xl flex items-start gap-3 animate-fade-in">
+                <AlertTriangle size={18} className="text-gold-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gold-700">Menunggu Jadwal Pemasangan</p>
+                  <p className="text-xs text-gold-600 mt-0.5">
+                    Pembayaran Anda telah diterima. Teknisi kami akan segera menghubungi Anda.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Stats (placeholder — invoices/tickets still from mock) */}
+            <div className="grid grid-cols-2 gap-3 stagger-children">
+              <StatCard icon={CreditCard} label="Status Paket" value={customer.status === 'active' ? '✓' : '⏳'} color={customer.status === 'active' ? 'green' : 'gold'} />
+              <StatCard icon={Ticket} label="Tiket Aktif" value={0} color="blue" />
+            </div>
+          </>
+        ) : (
+          /* No subscription yet */
+          <div className="bg-white rounded-2xl p-6 border border-border-light text-center space-y-4 animate-fade-in">
+            <div className="w-14 h-14 bg-maroon-50 rounded-2xl flex items-center justify-center mx-auto">
+              <Wifi size={28} className="text-maroon-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-text-heading">Belum Berlangganan</h3>
+              <p className="text-xs text-text-muted mt-1">
+                Anda belum memiliki layanan internet aktif. Daftarkan paket sekarang!
               </p>
-            </button>
+            </div>
+            <div className="max-w-[200px] mx-auto">
+              <ActionButton fullWidth icon={<Plus size={16} />} onClick={() => router.push('/customer/services')}>
+                Daftar Layanan
+              </ActionButton>
+            </div>
           </div>
         )}
 
@@ -102,13 +150,13 @@ export default function CustomerDashboard() {
               <p className="text-xs font-semibold text-text-heading">Lapor Gangguan</p>
             </button>
             <button
-              onClick={() => router.push('/customer/invoices')}
+              onClick={() => router.push('/customer/services')}
               className="bg-white rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border-light text-center hover:border-maroon-200 transition-colors active:scale-[0.97]"
             >
-              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center mx-auto mb-2">
-                <CreditCard size={20} className="text-green-600" />
+              <div className="w-10 h-10 bg-maroon-50 rounded-xl flex items-center justify-center mx-auto mb-2">
+                <Wifi size={20} className="text-maroon-600" />
               </div>
-              <p className="text-xs font-semibold text-text-heading">Bayar Tagihan</p>
+              <p className="text-xs font-semibold text-text-heading">Layanan Saya</p>
             </button>
           </div>
         </div>

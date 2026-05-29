@@ -1,76 +1,122 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import StatCard from '@/components/ui/StatCard';
 import ListCard from '@/components/ui/ListCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTechnicianByUserId, getInstallationsForTechnician, getTicketsForTechnician } from '@/lib/mock-data';
-import { INSTALLATION_STATUS_LABELS, INSTALLATION_STATUS_COLORS, TICKET_STATUS_LABELS, TICKET_STATUS_COLORS } from '@/lib/utils/constants';
-import { formatDateShort, getInitials } from '@/lib/utils/formatters';
-import { Wrench, Ticket, CheckCircle, Clock } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { getInitials } from '@/lib/utils/formatters';
+import { Wrench, CheckCircle, Clock, MapPin, Wifi, Zap } from 'lucide-react';
+import Link from 'next/link';
+
+interface PendingTask {
+  id: string;
+  status: string;
+  installation_address: string;
+  installation_area: string | null;
+  profile: { full_name: string } | null;
+  isp: { name: string; speed_limit: string } | null;
+}
 
 export default function TechDashboard() {
   const { profile } = useAuth();
-  const tech = profile ? getTechnicianByUserId(profile.id) : null;
-  const installations = tech ? getInstallationsForTechnician(tech.id) : [];
-  const tickets = tech ? getTicketsForTechnician(tech.id) : [];
+  const [pending, setPending] = useState<PendingTask[]>([]);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const pendingTasks = installations.filter((i) => i.status === 'pending' || i.status === 'in_progress').length;
-  const completedTasks = installations.filter((i) => i.status === 'success').length;
-  const activeTickets = tickets.filter((t) => t.status === 'submitted' || t.status === 'processing').length;
+  useEffect(() => {
+    async function fetchData() {
+      if (!profile) return;
+      try {
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+          .from('customers')
+          .select(`
+            id,
+            status,
+            installation_address,
+            installation_area,
+            profile:profiles!customers_profile_id_fkey(full_name),
+            isp:isps(name, speed_limit)
+          `)
+          .in('status', ['pending', 'active'])
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const all = (data as any[]) || [];
+        const assigned = all.filter((t) => t.managed_by === profile.id);
+        setPending(all.filter((t) => t.status === 'pending'));
+        setCompletedCount(all.filter((t) => t.status === 'active' && t.managed_by === profile.id).length);
+      } catch (err: any) {
+        console.error('Tech dashboard error:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [profile]);
 
   return (
     <>
       <TopBar title="Dashboard Teknisi" />
       <div className="p-4 space-y-5">
         <div className="animate-fade-in">
-          <h2 className="text-lg font-bold text-text-heading">Halo, {profile?.full_name?.split(' ')[0]} 🔧</h2>
-          <p className="text-xs text-text-muted mt-0.5">Area: {tech?.assigned_area || '-'}</p>
+          <h2 className="text-lg font-bold text-text-heading">
+            Halo, {profile?.full_name?.split(' ')[0]} 🔧
+          </h2>
+          <p className="text-xs text-text-muted mt-0.5">Tugas pemasangan hari ini</p>
         </div>
 
         <div className="grid grid-cols-3 gap-2.5 stagger-children">
-          <StatCard icon={Clock} label="Pending" value={pendingTasks} color="gold" />
-          <StatCard icon={CheckCircle} label="Selesai" value={completedTasks} color="green" />
-          <StatCard icon={Ticket} label="Tiket" value={activeTickets} color="blue" />
+          <StatCard icon={Clock} label="Pending" value={loading ? '—' : pending.length} color="gold" />
+          <StatCard icon={CheckCircle} label="Selesai" value={loading ? '—' : completedCount} color="green" />
+          <StatCard icon={Wrench} label="Tiket" value="—" color="blue" />
         </div>
 
         {/* Active Tasks */}
         <div>
-          <h3 className="text-sm font-bold text-text-heading mb-2">Tugas Aktif</h3>
-          <div className="space-y-2.5">
-            {installations.filter((i) => i.status !== 'success').map((ins) => (
-              <ListCard
-                key={ins.id}
-                href={`/technician/tasks/${ins.id}`}
-                avatar={<div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Wrench size={18} /></div>}
-                title={ins.customer?.profile?.full_name || 'Pelanggan'}
-                subtitle={`${ins.package?.name} · ${ins.address}`}
-                trailing={<StatusBadge label={INSTALLATION_STATUS_LABELS[ins.status]} colorClass={INSTALLATION_STATUS_COLORS[ins.status]} />}
-              />
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-text-heading">Antrean Pemasangan</h3>
+            <Link href="/technician/tasks" className="text-xs text-maroon-600 font-semibold">
+              Lihat Semua
+            </Link>
           </div>
-        </div>
 
-        {/* Active Tickets */}
-        <div>
-          <h3 className="text-sm font-bold text-text-heading mb-2">Tiket Ditugaskan</h3>
-          <div className="space-y-2.5">
-            {tickets.filter((t) => t.status !== 'resolved' && t.status !== 'closed').map((t) => (
-              <ListCard
-                key={t.id}
-                href={`/technician/tickets/${t.id}`}
-                avatar={
-                  <div className="w-10 h-10 rounded-xl bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                    {getInitials(t.customer?.profile?.full_name || '')}
-                  </div>
-                }
-                title={t.subject}
-                subtitle={t.customer?.profile?.full_name || ''}
-                trailing={<StatusBadge label={TICKET_STATUS_LABELS[t.status]} colorClass={TICKET_STATUS_COLORS[t.status]} />}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <div className="w-6 h-6 rounded-full border-4 border-maroon-100 border-t-maroon-600 animate-spin" />
+            </div>
+          ) : pending.length === 0 ? (
+            <div className="bg-white rounded-2xl p-6 border border-border-light text-center">
+              <p className="text-xs text-text-muted">Tidak ada antrean pemasangan</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5 stagger-children">
+              {pending.slice(0, 4).map((task) => (
+                <ListCard
+                  key={task.id}
+                  href="/technician/tasks"
+                  avatar={
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Wifi size={18} />
+                    </div>
+                  }
+                  title={task.profile?.full_name || '—'}
+                  subtitle={`${task.isp?.name || ''} · ${task.isp?.speed_limit || ''} · ${task.installation_area || ''}`}
+                  trailing={
+                    <StatusBadge
+                      label="Menunggu"
+                      colorClass="bg-gold-50 text-gold-700 border-gold-200"
+                    />
+                  }
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
