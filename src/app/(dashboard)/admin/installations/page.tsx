@@ -284,7 +284,7 @@ export default function AdminInstallationsPage() {
   return (
     <>
       <TopBar title="Pemasangan" showBack backHref="/admin/more" />
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 pb-28">
         <FilterChips options={FILTERS} selected={filter} onChange={setFilter} />
 
         {loading ? (
