@@ -34,6 +34,7 @@ export default function TechDashboard() {
   const { profile } = useAuth();
   const [pending, setPending] = useState<DashboardTask[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
+  const [ticketCount, setTicketCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,36 +43,50 @@ export default function TechDashboard() {
       try {
         const supabase = createClient();
 
-        const { data, error } = await supabase
-          .from('installations_and_tickets')
-          .select(`
-            id,
-            type,
-            status,
-            scheduled_date,
-            customer_id,
-            customer:customers (
+        const [tasksRes, ticketsRes] = await Promise.all([
+          supabase
+            .from('installations_and_tickets')
+            .select(`
               id,
-              installation_address,
-              installation_area,
-              profile:profiles!customers_profile_id_fkey (
-                full_name,
-                phone
-              ),
-              isp:isps (
-                name,
-                speed_limit
+              type,
+              status,
+              scheduled_date,
+              customer_id,
+              customer:customers (
+                id,
+                installation_address,
+                installation_area,
+                profile:profiles!profile_id (
+                  full_name,
+                  phone
+                ),
+                isp:isps (
+                  name,
+                  speed_limit
+                )
               )
-            )
-          `)
-          .eq('technician_id', profile.id)
-          .eq('type', 'new_installation');
+            `)
+            .eq('technician_id', profile.id)
+            .eq('type', 'new_installation'),
+          supabase
+            .from('installations_and_tickets')
+            .select('id, status')
+            .eq('type', 'complaint')
+            .or(`technician_id.eq.${profile.id},technician_id.is.null`)
+        ]);
 
-        if (error) throw error;
+        if (tasksRes.error) throw tasksRes.error;
+        if (ticketsRes.error) throw ticketsRes.error;
 
-        const all = (data as any[]) || [];
-        setPending(all.filter((t) => t.status === 'in_progress'));
-        setCompletedCount(all.filter((t) => t.status === 'completed').length);
+        const allTasks = (tasksRes.data as any[]) || [];
+        setPending(allTasks.filter((t) => t.status === 'in_progress' || t.status === 'pending'));
+        setCompletedCount(allTasks.filter((t) => t.status === 'completed' || t.status === 'success' || t.status === 'done').length);
+
+        const allTickets = (ticketsRes.data as any[]) || [];
+        const activeTickets = allTickets.filter(
+          (t) => t.status === 'submitted' || t.status === 'in_progress'
+        );
+        setTicketCount(activeTickets.length);
       } catch (err: any) {
         console.error('Tech dashboard error:', err.message);
       } finally {
@@ -95,7 +110,7 @@ export default function TechDashboard() {
         <div className="grid grid-cols-3 gap-2.5 stagger-children">
           <StatCard icon={Clock} label="Pending" value={loading ? '—' : pending.length} color="gold" />
           <StatCard icon={CheckCircle} label="Selesai" value={loading ? '—' : completedCount} color="green" />
-          <StatCard icon={Wrench} label="Tiket" value="—" color="blue" />
+          <StatCard icon={Wrench} label="Tiket" value={loading ? '—' : ticketCount} color="blue" />
         </div>
 
         {/* Active Tasks */}
@@ -118,12 +133,12 @@ export default function TechDashboard() {
           ) : (
             <div className="space-y-2.5 stagger-children">
               {pending && pending.slice(0, 4).map((task) => {
-                console.log("Debug Tech Item:", task);
                 const customerName = 
-                  task.customer?.profile?.full_name || 
-                  (task.customer?.profile as any)?.name || 
-                  (task.customer?.profile as any)?.username || 
-                  'Pelanggan Baru';
+                  task.customer?.profile?.full_name ||
+                  (task.customer as any)?.profiles?.full_name ||
+                  (task.customer as any)?.full_name ||
+                  task.customer?.profile?.phone ||
+                  'Pelanggan';
                 return (
                   <ListCard
                     key={task.id}

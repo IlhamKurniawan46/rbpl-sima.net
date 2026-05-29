@@ -3,15 +3,13 @@
 import TopBar from '@/components/layout/TopBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getTechnicianByUserId } from '@/lib/mock-data';
 import { getInitials } from '@/lib/utils/formatters';
-import { Mail, Phone, MapPin, Wrench, LogOut } from 'lucide-react';
+import { Mail, Phone, Wrench, LogOut } from 'lucide-react';
 import ActionButton from '@/components/ui/ActionButton';
 
 export default function TechProfilePage() {
   const { user, profile, logout } = useAuth();
   const router = useRouter();
-  const tech = profile ? getTechnicianByUserId(profile.id) : null;
 
   return (
     <>
@@ -24,17 +22,23 @@ export default function TechProfilePage() {
           <h2 className="text-lg font-bold text-text-heading">{profile?.full_name}</h2>
           <p className="text-xs text-text-muted mt-1">Teknisi</p>
           <div className="mt-4 space-y-2.5 text-left">
-            <div className="flex items-center gap-2 text-sm text-text-muted"><Mail size={15} /> {user?.email}</div>
-            <div className="flex items-center gap-2 text-sm text-text-muted"><Phone size={15} /> {profile?.phone}</div>
-            {tech && (
-              <>
-                <div className="flex items-center gap-2 text-sm text-text-muted"><Wrench size={15} /> {tech.specialization}</div>
-                <div className="flex items-center gap-2 text-sm text-text-muted"><MapPin size={15} /> Area: {tech.assigned_area}</div>
-              </>
-            )}
+            <div className="flex items-center gap-2 text-sm text-text-muted">
+              <Mail size={15} /> {user?.email || '—'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-text-muted">
+              <Phone size={15} /> {profile?.phone || '—'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-text-muted">
+              <Wrench size={15} /> Teknisi Jaringan
+            </div>
           </div>
         </div>
-        <ActionButton fullWidth variant="danger" icon={<LogOut size={16} />} onClick={() => { logout(); router.replace('/'); }}>
+        <ActionButton
+          fullWidth
+          variant="danger"
+          icon={<LogOut size={16} />}
+          onClick={() => { logout(); router.replace('/'); }}
+        >
           Keluar
         </ActionButton>
       </div>

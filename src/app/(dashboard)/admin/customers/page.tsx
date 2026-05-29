@@ -17,6 +17,7 @@ interface CustomerRow {
   profile: { full_name: string; phone: string | null } | null;
   isp: { name: string; speed_limit: string } | null;
   managed_by_profile: { full_name: string } | null;
+  tickets: { type: string; status: string }[] | null;
 }
 
 const FILTER_OPTIONS = [
@@ -58,7 +59,8 @@ export default function CustomersPage() {
             installation_area,
             profile:profiles!customers_profile_id_fkey(full_name, phone),
             isp:isps(name, speed_limit),
-            managed_by_profile:profiles!customers_managed_by_fkey(full_name)
+            managed_by_profile:profiles!customers_managed_by_fkey(full_name),
+            tickets:installations_and_tickets(type, status)
           `)
           .order('created_at', { ascending: false });
 
@@ -84,7 +86,18 @@ export default function CustomersPage() {
       fullName.toLowerCase().includes(search.toLowerCase()) ||
       address.toLowerCase().includes(search.toLowerCase()) ||
       isp.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'all' || c.status === filter;
+
+    const isCustomerActive = 
+      c.status === 'active' || 
+      c.tickets?.some((t: any) => t.type === 'new_installation' && (t.status === 'success' || t.status === 'done' || t.status === 'completed')) ||
+      false;
+
+    const matchFilter = 
+      filter === 'all' || 
+      (filter === 'active' && isCustomerActive) || 
+      (filter === 'pending' && !isCustomerActive && c.status === 'pending') ||
+      c.status === filter;
+
     return matchSearch && matchFilter;
   });
 
@@ -112,26 +125,33 @@ export default function CustomersPage() {
               <p className="text-xs text-text-muted mt-1">Coba ubah kata kunci atau filter pencarian.</p>
             </div>
           ) : (
-            filtered.map((c) => (
-              <ListCard
-                key={c.id}
-                href={`/admin/customers/${c.id}`}
-                avatar={
-                  <div className="w-10 h-10 rounded-full bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                    {getInitials(c.profile?.full_name || '')}
-                  </div>
-                }
-                title={c.profile?.full_name || '—'}
-                subtitle={`${c.isp?.name || 'Tidak ada paket'} · ${c.installation_area || ''} · ${c.installation_address}`}
-                trailing={
-                  <StatusBadge
-                    label={STATUS_LABELS[c.status] || c.status}
-                    colorClass={STATUS_COLORS[c.status] || 'bg-gray-50 text-gray-600 border-gray-200'}
-                  />
-                }
-                showChevron
-              />
-            ))
+            filtered.map((c) => {
+              const isCustomerActive = 
+                c.status === 'active' || 
+                c.tickets?.some((t: any) => t.type === 'new_installation' && (t.status === 'success' || t.status === 'done' || t.status === 'completed')) ||
+                false;
+
+              return (
+                <ListCard
+                  key={c.id}
+                  href={`/admin/customers/${c.id}`}
+                  avatar={
+                    <div className="w-10 h-10 rounded-full bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
+                      {getInitials(c.profile?.full_name || '')}
+                    </div>
+                  }
+                  title={c.profile?.full_name || '—'}
+                  subtitle={`${c.isp?.name || 'Tidak ada paket'} · ${c.installation_area || ''} · ${c.installation_address}`}
+                  trailing={
+                    <StatusBadge
+                      label={isCustomerActive ? 'Aktif' : 'Menunggu'}
+                      colorClass={isCustomerActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gold-50 text-gold-700 border-gold-200'}
+                    />
+                  }
+                  showChevron
+                />
+              );
+            })
           )}
         </div>
       </div>

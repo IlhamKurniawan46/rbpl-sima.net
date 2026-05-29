@@ -23,6 +23,8 @@ export default function CustomerDashboard() {
   const { profile } = useAuth();
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
+  const [activeTickets, setActiveTickets] = useState(0);
+  const [instTaskStatus, setInstTaskStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +46,32 @@ export default function CustomerDashboard() {
 
         if (error) throw error;
         setCustomer(data as any);
+
+        if (data) {
+          // Count active tickets (status: submitted or in_progress) of type complaint
+          const { count, error: ticketErr } = await supabase
+            .from('installations_and_tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('customer_id', data.id)
+            .eq('type', 'complaint')
+            .in('status', ['submitted', 'in_progress']);
+
+          if (!ticketErr && count !== null) {
+            setActiveTickets(count);
+          }
+
+          // Fetch the latest installation task status
+          const { data: instData, error: instErr } = await supabase
+            .from('installations_and_tickets')
+            .select('status')
+            .eq('customer_id', data.id)
+            .eq('type', 'new_installation')
+            .maybeSingle();
+
+          if (!instErr && instData) {
+            setInstTaskStatus(instData.status);
+          }
+        }
       } catch (err: any) {
         console.error('Failed to fetch customer record:', err.message);
       } finally {
@@ -75,13 +103,21 @@ export default function CustomerDashboard() {
             {/* Active/Pending Service Card */}
             <div
               className={`rounded-2xl p-4 text-white animate-fade-in ${
-                customer.status === 'active' ? 'bg-maroon-600' : 'bg-gold-500'
+                customer.status === 'active' || instTaskStatus === 'success' || instTaskStatus === 'done' || instTaskStatus === 'completed'
+                  ? 'bg-maroon-600'
+                  : instTaskStatus === 'in_progress'
+                  ? 'bg-blue-600'
+                  : 'bg-gold-500'
               }`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <Wifi size={18} />
                 <span className="text-xs font-medium opacity-80">
-                  {customer.status === 'active' ? 'Layanan Aktif' : 'Menunggu Pemasangan'}
+                  {customer.status === 'active' || instTaskStatus === 'success' || instTaskStatus === 'done' || instTaskStatus === 'completed'
+                    ? 'Layanan Aktif'
+                    : instTaskStatus === 'in_progress'
+                    ? 'Proses Pemasangan'
+                    : 'Menunggu Pemasangan'}
                 </span>
               </div>
               <p className="text-xl font-bold">{customer.isp?.name}</p>
@@ -97,14 +133,18 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Status info for pending */}
-            {customer.status === 'pending' && (
+            {/* Status info for pending/in_progress */}
+            {(customer.status === 'pending' && !(instTaskStatus === 'success' || instTaskStatus === 'done' || instTaskStatus === 'completed')) && (
               <div className="p-3.5 bg-gold-50 border border-gold-200 rounded-2xl flex items-start gap-3 animate-fade-in">
                 <AlertTriangle size={18} className="text-gold-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-gold-700">Menunggu Jadwal Pemasangan</p>
+                  <p className="text-sm font-semibold text-gold-700">
+                    {instTaskStatus === 'in_progress' ? 'Proses Pemasangan Sedang Berjalan' : 'Menunggu Jadwal Pemasangan'}
+                  </p>
                   <p className="text-xs text-gold-600 mt-0.5">
-                    Pembayaran Anda telah diterima. Teknisi kami akan segera menghubungi Anda.
+                    {instTaskStatus === 'in_progress'
+                      ? 'Teknisi sedang memproses pemasangan jaringan internet Anda.'
+                      : 'Pembayaran Anda telah diterima. Teknisi kami akan segera menghubungi Anda.'}
                   </p>
                 </div>
               </div>
@@ -112,8 +152,25 @@ export default function CustomerDashboard() {
 
             {/* Quick Stats (placeholder — invoices/tickets still from mock) */}
             <div className="grid grid-cols-2 gap-3 stagger-children">
-              <StatCard icon={CreditCard} label="Status Paket" value={customer.status === 'active' ? '✓' : '⏳'} color={customer.status === 'active' ? 'green' : 'gold'} />
-              <StatCard icon={Ticket} label="Tiket Aktif" value={0} color="blue" />
+              <StatCard
+                icon={CreditCard}
+                label="Status Pemasangan"
+                value={
+                  customer.status === 'active' || instTaskStatus === 'success' || instTaskStatus === 'done' || instTaskStatus === 'completed'
+                    ? 'Selesai'
+                    : instTaskStatus === 'in_progress'
+                    ? 'Proses'
+                    : 'Pending'
+                }
+                color={
+                  customer.status === 'active' || instTaskStatus === 'success' || instTaskStatus === 'done' || instTaskStatus === 'completed'
+                    ? 'green'
+                    : instTaskStatus === 'in_progress'
+                    ? 'blue'
+                    : 'gold'
+                }
+              />
+              <StatCard icon={Ticket} label="Tiket Aktif" value={activeTickets} color="blue" />
             </div>
           </>
         ) : (

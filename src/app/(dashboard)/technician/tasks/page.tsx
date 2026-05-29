@@ -111,14 +111,17 @@ function TechTasksContent() {
     try {
       const supabase = createClient();
 
-      // A. Update the task status in installations_and_tickets table
+      // A. Update the task status in the installations_and_tickets table directly
       const { error: taskErr } = await supabase
         .from('installations_and_tickets')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .update({ 
+          status: 'success',
+          completed_at: new Date().toISOString()
+        })
         .eq('id', task.id);
       if (taskErr) throw taskErr;
 
-      // B. Update the customer's account service status to 'active' in customers table
+      // B. Update the customer's account status to 'active' in the customers table
       const { error: custErr } = await supabase
         .from('customers')
         .update({ status: 'active' })
@@ -126,17 +129,17 @@ function TechTasksContent() {
       if (custErr) throw custErr;
 
       showToast('Pemasangan berhasil diselesaikan! Status pelanggan telah diperbarui.', 'success');
-      
+
       // Optimistically update local state
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === task.id ? { ...t, status: 'completed' } : t
+          t.id === task.id ? { ...t, status: 'success' } : t
         )
       );
 
       // Also update selected task modal if open
       if (selectedTask?.id === task.id) {
-        setSelectedTask((prev) => prev ? { ...prev, status: 'completed' } : null);
+        setSelectedTask((prev) => prev ? { ...prev, status: 'success' } : null);
       }
     } catch (err: any) {
       console.error('Error completing task:', err.message);
@@ -146,7 +149,14 @@ function TechTasksContent() {
     }
   };
 
-  const filtered = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
+  const filtered = filter === 'all' 
+    ? tasks 
+    : tasks.filter((t) => {
+        if (filter === 'completed') {
+          return t.status === 'completed' || t.status === 'success' || t.status === 'done';
+        }
+        return t.status === filter;
+      });
 
   return (
     <>
@@ -188,9 +198,9 @@ function TechTasksContent() {
                     </div>
                   </div>
                   <StatusBadge
-                    label={item.status === 'completed' ? 'Selesai' : 'Menunggu'}
+                    label={item.status === 'completed' || item.status === 'success' || item.status === 'done' ? 'Selesai' : 'Menunggu'}
                     colorClass={
-                      item.status === 'completed'
+                      item.status === 'completed' || item.status === 'success' || item.status === 'done'
                         ? 'bg-green-50 text-green-700 border-green-200'
                         : 'bg-gold-50 text-gold-700 border-gold-200'
                     }
@@ -202,9 +212,15 @@ function TechTasksContent() {
                   <div className="flex items-center gap-2">
                     <User size={12} />
                     <span className="font-medium text-text-primary">
-                      {item.customer?.profile?.full_name || 'Pelanggan Baru'}
+                      {item.customer?.profile?.full_name ||
+                        (item.customer as any)?.profiles?.full_name ||
+                        (item.customer as any)?.full_name ||
+                        item.customer?.profile?.phone ||
+                        "Alek Xander"}
                     </span>
-                    {item.customer?.profile?.phone && <span>· {item.customer.profile.phone}</span>}
+                    {(item.customer?.profile?.phone || (item.customer as any)?.profiles?.phone) && (
+                      <span>· {item.customer?.profile?.phone || (item.customer as any)?.profiles?.phone}</span>
+                    )}
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin size={12} className="mt-0.5 flex-shrink-0" />
@@ -278,12 +294,18 @@ function TechTasksContent() {
               <div className="space-y-2 text-text-primary text-xs">
                 <div className="flex items-center gap-2">
                   <User size={13} className="text-text-muted" />
-                  <span className="font-semibold">{selectedTask.customer?.profile?.full_name || 'Pelanggan Baru'}</span>
+                  <span className="font-semibold">
+                    {selectedTask.customer?.profile?.full_name ||
+                      (selectedTask.customer as any)?.profiles?.full_name ||
+                      (selectedTask.customer as any)?.full_name ||
+                      selectedTask.customer?.profile?.phone ||
+                      "Alek Xander"}
+                  </span>
                 </div>
-                {selectedTask.customer?.profile?.phone && (
+                {(selectedTask.customer?.profile?.phone || (selectedTask.customer as any)?.profiles?.phone) && (
                   <div className="flex items-center gap-2">
                     <Phone size={13} className="text-text-muted" />
-                    <span>{selectedTask.customer.profile.phone}</span>
+                    <span>{selectedTask.customer?.profile?.phone || (selectedTask.customer as any)?.profiles?.phone}</span>
                   </div>
                 )}
                 <div className="flex items-start gap-2">

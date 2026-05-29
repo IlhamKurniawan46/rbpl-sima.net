@@ -19,37 +19,37 @@ interface DashStats {
 
 interface RecentTicket {
   id: string;
-  subject: string;
+  type: string;
+  title?: string | null;
+  description: string | null;
   status: string;
-  priority: string;
   created_at: string;
   customer: { profile: { full_name: string } | null } | null;
 }
 
 const TICKET_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-gold-50 text-gold-700 border-gold-200',
   submitted: 'bg-gold-50 text-gold-700 border-gold-200',
-  processing: 'bg-blue-50 text-blue-700 border-blue-200',
-  resolved: 'bg-green-50 text-green-700 border-green-200',
-  closed: 'bg-gray-50 text-gray-600 border-gray-200',
+  in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
+  success: 'bg-green-50 text-green-700 border-green-200',
+  completed: 'bg-green-50 text-green-700 border-green-200',
+  done: 'bg-green-50 text-green-700 border-green-200',
+  failed: 'bg-red-50 text-red-700 border-red-200',
 };
 
 const TICKET_STATUS_LABELS: Record<string, string> = {
+  pending: 'Menunggu',
   submitted: 'Diajukan',
-  processing: 'Diproses',
-  resolved: 'Selesai',
-  closed: 'Tutup',
+  in_progress: 'Diproses',
+  success: 'Selesai',
+  completed: 'Selesai',
+  done: 'Selesai',
+  failed: 'Gagal',
 };
 
-const TICKET_PRIORITY_COLORS: Record<string, string> = {
-  low: 'bg-gray-50 text-gray-600 border-gray-200',
-  medium: 'bg-gold-50 text-gold-700 border-gold-200',
-  high: 'bg-red-50 text-red-700 border-red-200',
-};
-
-const TICKET_PRIORITY_LABELS: Record<string, string> = {
-  low: 'Rendah',
-  medium: 'Sedang',
-  high: 'Tinggi',
+const TICKET_TYPE_LABELS: Record<string, string> = {
+  new_installation: 'Pemasangan Baru',
+  complaint: 'Komplain',
 };
 
 export default function AdminDashboard() {
@@ -63,21 +63,25 @@ export default function AdminDashboard() {
       try {
         const supabase = createClient();
 
-        const [customersRes, ticketsRes] = await Promise.all([
+        const [customersRes, ticketsRes, installsRes] = await Promise.all([
           supabase.from('customers').select('id, status', { count: 'exact' }),
           supabase
             .from('installations_and_tickets')
-            .select(`id, subject, status, priority, created_at, customer:customers(profile:profiles!customers_profile_id_fkey(full_name))`)
-            .in('status', ['submitted', 'processing'])
-            .order('created_at', { ascending: false })
-            .limit(5),
+            .select(`*, customer:customers(profile:profiles!profile_id(full_name))`)
+            .eq('type', 'complaint')
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('installations_and_tickets')
+            .select('id')
+            .eq('type', 'new_installation')
+            .in('status', ['submitted', 'in_progress']),
         ]);
 
         const allCustomers = customersRes.data || [];
-        const pendingInstalls = allCustomers.filter((c: any) => c.status === 'pending').length;
+        const pendingInstalls = installsRes.data?.length || 0;
 
         setStats({
-          totalCustomers: allCustomers.filter((c: any) => c.status !== 'pending').length,
+          totalCustomers: allCustomers.filter((c: any) => c.status === 'active').length,
           pendingInstalls,
           openTickets: ticketsRes.data?.length || 0,
         });
@@ -140,17 +144,13 @@ export default function AdminDashboard() {
                       {getInitials(ticket.customer?.profile?.full_name || '')}
                     </div>
                   }
-                  title={ticket.subject}
-                  subtitle={`${ticket.customer?.profile?.full_name || 'Pelanggan'} · ${formatRelativeTime(ticket.created_at)}`}
+                  title={ticket.title || ticket.description || 'Komplain'}
+                  subtitle={`${ticket.customer?.profile?.full_name || 'Pelanggan Baru'} · ${new Date(ticket.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`}
                   trailing={
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge
-                        label={TICKET_STATUS_LABELS[ticket.status] || ticket.status}
-                        colorClass={TICKET_STATUS_COLORS[ticket.status] || ''}
-                      />
-                      <StatusBadge
-                        label={TICKET_PRIORITY_LABELS[ticket.priority] || ticket.priority}
-                        colorClass={TICKET_PRIORITY_COLORS[ticket.priority] || ''}
+                        label={ticket.status === 'pending' ? 'Menunggu' : (ticket.status === 'completed' || ticket.status === 'success') ? 'Selesai' : (TICKET_STATUS_LABELS[ticket.status] || ticket.status)}
+                        colorClass={ticket.status === 'pending' ? 'bg-gold-50 text-gold-700 border-gold-200' : (ticket.status === 'completed' || ticket.status === 'success') ? 'bg-green-50 text-green-700 border-green-200' : (TICKET_STATUS_COLORS[ticket.status] || '')}
                       />
                     </div>
                   }

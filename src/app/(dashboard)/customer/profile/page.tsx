@@ -21,6 +21,7 @@ export default function CustomerProfilePage() {
   const { user, profile, logout } = useAuth();
   const router = useRouter();
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
+  const [instStatus, setInstStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,10 +31,22 @@ export default function CustomerProfilePage() {
         const supabase = createClient();
         const { data } = await supabase
           .from('customers')
-          .select(`installation_address, installation_area, status, isp:isps(name, speed_limit, price)`)
+          .select(`id, installation_address, installation_area, status, isp:isps(name, speed_limit, price)`)
           .eq('profile_id', profile.id)
           .maybeSingle();
         setCustomer(data as any);
+
+        if (data) {
+          const { data: instData } = await supabase
+            .from('installations_and_tickets')
+            .select('status')
+            .eq('customer_id', data.id)
+            .eq('type', 'new_installation')
+            .maybeSingle();
+          if (instData) {
+            setInstStatus(instData.status);
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -45,7 +58,7 @@ export default function CustomerProfilePage() {
 
   const STATUS_LABELS: Record<string, string> = {
     active: 'Aktif',
-    pending: 'Menunggu',
+    pending: 'Menunggu Pemasangan',
     inactive: 'Nonaktif',
   };
 
@@ -55,17 +68,31 @@ export default function CustomerProfilePage() {
     inactive: 'bg-gray-50 text-gray-600 border-gray-200',
   };
 
+  const isAccountActive = 
+    customer?.status === 'active' || 
+    instStatus === 'success' || 
+    instStatus === 'done' || 
+    instStatus === 'completed' ||
+    (profile as any)?.customers?.status === 'active' || 
+    (profile as any)?.status === 'active';
+
   return (
     <>
       <TopBar title="Profil" showNotification={false} />
       <div className="p-4 space-y-4">
         {/* Profile Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-[var(--shadow-card)] border border-border-light text-center">
+        <div className="bg-white rounded-2xl p-5 shadow-[var(--shadow-card)] border border-border-light text-center animate-fade-in">
           <div className="w-20 h-20 rounded-full bg-maroon-100 text-maroon-600 flex items-center justify-center text-2xl font-bold mx-auto mb-3">
             {getInitials(profile?.full_name || '')}
           </div>
           <h2 className="text-lg font-bold text-text-heading">{profile?.full_name}</h2>
-          <p className="text-xs text-text-muted mt-1">Pelanggan</p>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <span className="text-xs text-text-muted">Pelanggan</span>
+            <StatusBadge
+              label={isAccountActive ? 'Aktif' : 'Menunggu Pemasangan'}
+              colorClass={isAccountActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gold-50 text-gold-700 border-gold-200'}
+            />
+          </div>
 
           <div className="mt-4 space-y-2.5 text-left">
             <div className="flex items-center gap-2 text-sm text-text-muted">
@@ -95,10 +122,10 @@ export default function CustomerProfilePage() {
         {!loading && customer && (
           <div className="bg-white rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border-light space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-text-heading">Paket Aktif</h3>
+              <h3 className="text-sm font-bold text-text-heading">Status Layanan</h3>
               <StatusBadge
-                label={STATUS_LABELS[customer.status] || customer.status}
-                colorClass={STATUS_COLORS[customer.status] || ''}
+                label={isAccountActive ? 'Aktif' : 'Menunggu Pemasangan'}
+                colorClass={isAccountActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gold-50 text-gold-700 border-gold-200'}
               />
             </div>
             <div className="flex items-center gap-3">

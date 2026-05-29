@@ -20,13 +20,15 @@ export const INSTALLATION_STATUS_LABELS: Record<InstallationStatus, string> = {
   in_progress: 'Dalam Proses',
   success: 'Berhasil',
   failed: 'Gagal',
+  done: 'Selesai',
 };
 
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   submitted: 'Diajukan',
-  processing: 'Diproses',
-  resolved: 'Selesai',
-  closed: 'Ditutup',
+  in_progress: 'Diproses',
+  success: 'Berhasil',
+  failed: 'Gagal',
+  done: 'Selesai',
 };
 
 export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
@@ -75,13 +77,15 @@ export const INSTALLATION_STATUS_COLORS: Record<InstallationStatus, string> = {
   in_progress: 'bg-blue-100 text-blue-700',
   success: 'bg-green-100 text-green-700',
   failed: 'bg-red-100 text-red-700',
+  done: 'bg-emerald-100 text-emerald-700',
 };
 
 export const TICKET_STATUS_COLORS: Record<TicketStatus, string> = {
   submitted: 'bg-gold-100 text-gold-700',
-  processing: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  success: 'bg-green-100 text-green-700',
+  failed: 'bg-red-100 text-red-700',
+  done: 'bg-emerald-100 text-emerald-700',
 };
 
 export const TICKET_PRIORITY_COLORS: Record<TicketPriority, string> = {

@@ -32,6 +32,7 @@ export default function CustomerServicesPage() {
   const { profile } = useAuth();
   const { showToast } = useToast();
   const [customerRecord, setCustomerRecord] = useState<CustomerRecord | null>(null);
+  const [instStatus, setInstStatus] = useState<string | null>(null);
   const [packages, setPackages] = useState<ISPPackage[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +64,20 @@ export default function CustomerServicesPage() {
 
       if (customerErr) throw customerErr;
       setCustomerRecord(customerData as any);
+
+      if (customerData) {
+        // Fetch existing installations_and_tickets status
+        const { data: instData, error: instErr } = await supabase
+          .from('installations_and_tickets')
+          .select('status')
+          .eq('customer_id', customerData.id)
+          .eq('type', 'new_installation')
+          .maybeSingle();
+
+        if (!instErr && instData) {
+          setInstStatus(instData.status);
+        }
+      }
 
       // 2. Fetch active packages if customer doesn't have an order
       if (!customerData) {
@@ -147,20 +162,20 @@ export default function CustomerServicesPage() {
                     </div>
                   </div>
                 </div>
-                <StatusBadge 
+                 <StatusBadge 
                   label={
-                    customerRecord.status === 'active' 
+                    customerRecord.status === 'active' || instStatus === 'success' || instStatus === 'done' || instStatus === 'completed'
                       ? 'Aktif' 
-                      : customerRecord.status === 'pending' 
-                      ? 'Menunggu Pemasangan' 
-                      : 'Nonaktif'
+                      : instStatus === 'in_progress'
+                      ? 'Dalam Proses'
+                      : 'Menunggu Pemasangan'
                   } 
                   colorClass={
-                    customerRecord.status === 'active'
+                    customerRecord.status === 'active' || instStatus === 'success' || instStatus === 'done' || instStatus === 'completed'
                       ? 'bg-green-50 text-green-700 border-green-200'
-                      : customerRecord.status === 'pending'
-                      ? 'bg-gold-50 text-gold-700 border-gold-200'
-                      : 'bg-gray-50 text-gray-700 border-gray-200'
+                      : instStatus === 'in_progress'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-gold-50 text-gold-700 border-gold-200'
                   }
                 />
               </div>
@@ -172,7 +187,13 @@ export default function CustomerServicesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar size={13} />
-                  <span>Daftar sejak: {formatDate(customerRecord.created_at)}</span>
+                  <span>
+                    {customerRecord.status === 'active' || instStatus === 'success' || instStatus === 'done' || instStatus === 'completed'
+                      ? 'Pemasangan Selesai / Layanan Aktif'
+                      : instStatus === 'in_progress'
+                      ? 'Sedang Diproses oleh Teknisi'
+                      : `Daftar sejak: ${formatDate(customerRecord.created_at)}`}
+                  </span>
                 </div>
               </div>
 

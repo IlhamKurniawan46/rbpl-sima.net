@@ -9,11 +9,11 @@ export type CustomerStatus = 'active' | 'inactive' | 'pending';
 
 export type TechAvailability = 'available' | 'busy' | 'off';
 
-export type InstallationStatus = 'pending' | 'in_progress' | 'success' | 'failed';
+export type InstallationStatus = 'pending' | 'in_progress' | 'success' | 'failed' | 'done';
 
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
-export type TicketStatus = 'submitted' | 'processing' | 'resolved' | 'closed';
+export type TicketStatus = 'submitted' | 'in_progress' | 'success' | 'failed' | 'done';
 
 export type InvoiceStatus = 'unpaid' | 'paid' | 'overdue';
 
@@ -91,7 +91,7 @@ export interface Installation {
   status: InstallationStatus;
   notes: string | null;
   scheduled_date: string | null;
-  completed_date: string | null;
+  completed_at: string | null;
   created_at: string;
   // Joined fields
   customer?: Customer;

@@ -22,7 +22,7 @@ interface CustomerRow {
   created_at: string;
   profile: { full_name: string; phone: string | null } | null;
   isp: { name: string; speed_limit: string } | null;
-  ticket: { technician_id: string | null; scheduled_date: string | null } | null;
+  ticket: { technician_id: string | null; scheduled_date: string | null; status: string | null } | null;
 }
 
 interface Technician {
@@ -221,7 +221,7 @@ export default function AdminInstallationsPage() {
             created_at,
             profile:profiles!customers_profile_id_fkey(full_name, phone),
             isp:isps(name, speed_limit),
-            ticket:installations_and_tickets(technician_id, scheduled_date)
+            ticket:installations_and_tickets(technician_id, scheduled_date, status)
           `)
           .in('status', ['pending', 'active'])
           .order('created_at', { ascending: true }),
@@ -264,10 +264,10 @@ export default function AdminInstallationsPage() {
       prev.map((c) =>
         c.id === customerId
           ? {
-              ...c,
-              managed_by: techId,
-              ticket: { technician_id: techId, scheduled_date: date },
-            }
+            ...c,
+            managed_by: techId,
+            ticket: { technician_id: techId, scheduled_date: date, status: 'in_progress' },
+          }
           : c
       )
     );
@@ -321,8 +321,8 @@ export default function AdminInstallationsPage() {
                       </div>
                     </div>
                     <StatusBadge
-                      label={STATUS_LABELS[c.status] || c.status}
-                      colorClass={STATUS_COLORS[c.status] || ''}
+                      label={c.status === 'active' || c.ticket?.status === 'completed' || c.ticket?.status === 'success' || c.ticket?.status === 'done' ? 'Selesai' : 'Menunggu Pemasangan'}
+                      colorClass={c.status === 'active' || c.ticket?.status === 'completed' || c.ticket?.status === 'success' || c.ticket?.status === 'done' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gold-50 text-gold-700 border-gold-200'}
                     />
                   </div>
 
