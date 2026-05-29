@@ -12,6 +12,7 @@ export default function AdminMorePage() {
 
   const menuItems = [
     { icon: Users, label: 'Kelola Teknisi', subtitle: 'Daftar dan penugasan teknisi', href: '/admin/technicians' },
+    { icon: Users, label: 'Tambah Staff', subtitle: 'Buat akun Admin/Teknisi baru', href: '/admin/staff' },
     { icon: Package, label: 'Paket Internet', subtitle: 'Kelola paket layanan ISP', href: '/admin/packages' },
     { icon: Wifi, label: 'Pemasangan', subtitle: 'Status pemasangan pelanggan', href: '/admin/installations' },
     { icon: Bell, label: 'Notifikasi', subtitle: 'Pusat notifikasi', href: '/admin/notifications' },

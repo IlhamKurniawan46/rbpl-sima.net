@@ -38,7 +38,7 @@ export default function TechTicketDetailPage({ params }: { params: Promise<{ id:
             <StatusBadge label={TICKET_PRIORITY_LABELS[ticket.priority]} colorClass={TICKET_PRIORITY_COLORS[ticket.priority]} size="md" />
           </div>
           <div className="space-y-2 text-sm text-text-muted">
-            <div className="flex items-center gap-2"><User size={15} /> {ticket.customer?.user?.full_name}</div>
+            <div className="flex items-center gap-2"><User size={15} /> {ticket.customer?.profile?.full_name}</div>
             <div className="flex items-center gap-2"><AlertTriangle size={15} /> Dibuat: {formatDate(ticket.created_at)}</div>
           </div>
           <div className="mt-3 p-3 bg-surface-alt rounded-xl">

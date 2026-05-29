@@ -27,11 +27,34 @@ export default function RegisterPage() {
       setError('Password minimal 6 karakter');
       return;
     }
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    showToast('Registrasi berhasil! Silakan masuk.', 'success');
-    router.push('/login');
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim(),
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.nama,
+            phone: form.phone,
+          }
+        }
+      });
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      showToast('Registrasi berhasil! Silakan masuk.', 'success');
+      router.push('/login');
+    } catch (err: any) {
+      setError(err.message || 'Registrasi gagal. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

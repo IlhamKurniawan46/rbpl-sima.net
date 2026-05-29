@@ -22,7 +22,7 @@ export default function CustomersPage() {
   const [filter, setFilter] = useState('all');
 
   const filtered = mockCustomers.filter((c) => {
-    const matchSearch = !search || c.user?.full_name.toLowerCase().includes(search.toLowerCase()) || c.address.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || c.profile?.full_name.toLowerCase().includes(search.toLowerCase()) || c.installation_address.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'all' || c.status === filter;
     return matchSearch && matchFilter;
   });
@@ -40,11 +40,11 @@ export default function CustomersPage() {
               href={`/admin/customers/${c.id}`}
               avatar={
                 <div className="w-10 h-10 rounded-full bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                  {getInitials(c.user?.full_name || '')}
+                  {getInitials(c.profile?.full_name || '')}
                 </div>
               }
-              title={c.user?.full_name || ''}
-              subtitle={`${c.area_code} · ${c.address}`}
+              title={c.profile?.full_name || ''}
+              subtitle={`${c.installation_area} · ${c.installation_address}`}
               trailing={<StatusBadge label={CUSTOMER_STATUS_LABELS[c.status]} colorClass={CUSTOMER_STATUS_COLORS[c.status]} />}
               showChevron
             />

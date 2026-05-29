@@ -20,7 +20,7 @@ export default function InvoiceCard({ invoice, onClick }: InvoiceCardProps) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-text-heading truncate">{invoice.description}</p>
-          <p className="text-xs text-text-muted mt-0.5">{invoice.customer?.user?.full_name}</p>
+          <p className="text-xs text-text-muted mt-0.5">{invoice.customer?.profile?.full_name}</p>
         </div>
         <StatusBadge label={INVOICE_STATUS_LABELS[invoice.status]} colorClass={INVOICE_STATUS_COLORS[invoice.status]} />
       </div>

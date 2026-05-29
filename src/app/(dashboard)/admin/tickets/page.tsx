@@ -32,11 +32,11 @@ export default function AdminTicketsPage() {
               key={t.id}
               avatar={
                 <div className="w-10 h-10 rounded-xl bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                  {getInitials(t.customer?.user?.full_name || '')}
+                  {getInitials(t.customer?.profile?.full_name || '')}
                 </div>
               }
               title={t.subject}
-              subtitle={`${t.customer?.user?.full_name} · ${formatRelativeTime(t.created_at)}`}
+              subtitle={`${t.customer?.profile?.full_name} · ${formatRelativeTime(t.created_at)}`}
               trailing={
                 <div className="flex flex-col items-end gap-1">
                   <StatusBadge label={TICKET_STATUS_LABELS[t.status]} colorClass={TICKET_STATUS_COLORS[t.status]} />

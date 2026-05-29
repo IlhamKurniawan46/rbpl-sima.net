@@ -39,7 +39,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             <StatusBadge label={INSTALLATION_STATUS_LABELS[task.status]} colorClass={INSTALLATION_STATUS_COLORS[task.status]} size="md" />
           </div>
           <div className="space-y-2.5 text-sm">
-            <div className="flex items-center gap-2 text-text-muted"><User size={15} /> <span>{task.customer?.user?.full_name}</span></div>
+            <div className="flex items-center gap-2 text-text-muted"><User size={15} /> <span>{task.customer?.profile?.full_name}</span></div>
             <div className="flex items-center gap-2 text-text-muted"><MapPin size={15} /> <span>{task.address}</span></div>
             <div className="flex items-center gap-2 text-text-muted"><Package size={15} /> <span>{task.package?.name} — {task.package?.speed_mbps} Mbps</span></div>
             {task.scheduled_date && (

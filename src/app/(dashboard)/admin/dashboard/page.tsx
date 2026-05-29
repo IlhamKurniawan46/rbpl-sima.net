@@ -12,7 +12,7 @@ import { Users, Wrench, Ticket, CreditCard, AlertTriangle } from 'lucide-react';
 import { getInitials } from '@/lib/utils/formatters';
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const totalCustomers = mockCustomers.length;
   const pendingInstalls = mockInstallations.filter((i) => i.status === 'pending' || i.status === 'in_progress').length;
   const openTickets = mockTickets.filter((t) => t.status === 'submitted' || t.status === 'processing').length;
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
       <div className="p-4 space-y-5">
         {/* Greeting */}
         <div className="animate-fade-in">
-          <h2 className="text-lg font-bold text-text-heading">Halo, {user?.full_name?.split(' ')[0]} 👋</h2>
+          <h2 className="text-lg font-bold text-text-heading">Halo, {profile?.full_name?.split(' ')[0]} 👋</h2>
           <p className="text-xs text-text-muted mt-0.5">Ringkasan sistem hari ini</p>
         </div>
 
@@ -51,11 +51,11 @@ export default function AdminDashboard() {
                 href={`/admin/tickets`}
                 avatar={
                   <div className="w-10 h-10 rounded-xl bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                    {ticket.customer ? getInitials(ticket.customer.user?.full_name || '') : '?'}
+                    {ticket.customer ? getInitials(ticket.customer.profile?.full_name || '') : '?'}
                   </div>
                 }
                 title={ticket.subject}
-                subtitle={`${ticket.customer?.user?.full_name} · ${formatRelativeTime(ticket.created_at)}`}
+                subtitle={`${ticket.customer?.profile?.full_name} · ${formatRelativeTime(ticket.created_at)}`}
                 trailing={
                   <div className="flex flex-col items-end gap-1">
                     <StatusBadge label={TICKET_STATUS_LABELS[ticket.status]} colorClass={TICKET_STATUS_COLORS[ticket.status]} />

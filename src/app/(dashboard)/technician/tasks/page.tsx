@@ -20,9 +20,9 @@ const FILTERS = [
 ];
 
 export default function TechTasksPage() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [filter, setFilter] = useState('all');
-  const tech = user ? getTechnicianByUserId(user.id) : null;
+  const tech = profile ? getTechnicianByUserId(profile.id) : null;
   const all = tech ? getInstallationsForTechnician(tech.id) : [];
   const tasks = filter === 'all' ? all : all.filter((i) => i.status === filter);
 
@@ -40,7 +40,7 @@ export default function TechTasksPage() {
                 key={ins.id}
                 href={`/technician/tasks/${ins.id}`}
                 avatar={<div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Wifi size={18} /></div>}
-                title={ins.customer?.user?.full_name || 'Pelanggan'}
+                title={ins.customer?.profile?.full_name || 'Pelanggan'}
                 subtitle={`${ins.package?.name} · ${ins.area_code} · ${formatDateShort(ins.created_at)}`}
                 trailing={<StatusBadge label={INSTALLATION_STATUS_LABELS[ins.status]} colorClass={INSTALLATION_STATUS_COLORS[ins.status]} />}
               />

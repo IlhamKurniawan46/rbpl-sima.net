@@ -11,8 +11,8 @@ import { formatRelativeTime, getInitials } from '@/lib/utils/formatters';
 import { Ticket } from 'lucide-react';
 
 export default function TechTicketsPage() {
-  const { user } = useAuth();
-  const tech = user ? getTechnicianByUserId(user.id) : null;
+  const { profile } = useAuth();
+  const tech = profile ? getTechnicianByUserId(profile.id) : null;
   const tickets = tech ? getTicketsForTechnician(tech.id) : [];
 
   return (
@@ -29,11 +29,11 @@ export default function TechTicketsPage() {
                 href={`/technician/tickets/${t.id}`}
                 avatar={
                   <div className="w-10 h-10 rounded-xl bg-maroon-100 text-maroon-600 flex items-center justify-center text-xs font-bold">
-                    {getInitials(t.customer?.user?.full_name || '')}
+                    {getInitials(t.customer?.profile?.full_name || '')}
                   </div>
                 }
                 title={t.subject}
-                subtitle={`${t.customer?.user?.full_name} · ${formatRelativeTime(t.created_at)}`}
+                subtitle={`${t.customer?.profile?.full_name} · ${formatRelativeTime(t.created_at)}`}
                 trailing={
                   <div className="flex flex-col items-end gap-1">
                     <StatusBadge label={TICKET_STATUS_LABELS[t.status]} colorClass={TICKET_STATUS_COLORS[t.status]} />

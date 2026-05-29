@@ -1,67 +1,133 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { User, UserRole } from '@/lib/types/database';
-import { mockUsers, DEMO_CREDENTIALS } from '@/lib/mock-data';
+// ============================================================
+// AuthContext — Real Supabase Auth (replaces mock auth)
+// ============================================================
 
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import type { Profile, UserRole } from '@/lib/types/database';
+
+// ---- Shape of the context ----
 interface AuthContextType {
-  user: User | null;
+  /** Raw Supabase auth user (contains email, id, etc.) */
+  user: SupabaseUser | null;
+  /** Extended profile row from public.profiles */
+  profile: Profile | null;
+  session: Session | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
   isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const stored = localStorage.getItem('sima-user');
-    return stored ? JSON.parse(stored) : null;
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const supabase = createClient();
 
-  const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800));
+  const [session, setSession]   = useState<Session | null>(null);
+  const [user, setUser]         = useState<SupabaseUser | null>(null);
+  const [profile, setProfile]   = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // true while we wait for initial session
 
-    // Check demo credentials
-    const validCreds = Object.values(DEMO_CREDENTIALS).find(
-      (cred) => cred.email === email && cred.password === password
-    );
+  // ------------------------------------------------------------------
+  // Fetch the extended profile row from public.profiles
+  // ------------------------------------------------------------------
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, role, created_at')
+        .eq('id', userId)
+        .single();
 
-    if (!validCreds) {
+      if (error) {
+        console.error('[AuthContext] Failed to fetch profile:', error.message);
+        setProfile(null);
+      } else {
+        setProfile(data as Profile);
+      }
+    },
+    [supabase]
+  );
+
+  // ------------------------------------------------------------------
+  // Bootstrap: restore session on first render and subscribe to changes
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    // 1. Restore current session synchronously if already stored in cookies
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setIsLoading(false));
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // 2. Listen for future auth state changes (sign-in, sign-out, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase, fetchProfile]);
+
+  // ------------------------------------------------------------------
+  // login
+  // ------------------------------------------------------------------
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       setIsLoading(false);
-      return { success: false, error: 'Email atau password salah' };
-    }
 
-    const foundUser = mockUsers.find((u) => u.email === email);
-    if (!foundUser) {
-      setIsLoading(false);
-      return { success: false, error: 'User tidak ditemukan' };
-    }
+      if (error) {
+        return { success: false, error: 'Email atau password salah' };
+      }
+      return { success: true };
+    },
+    [supabase]
+  );
 
-    setUser(foundUser);
-    localStorage.setItem('sima-user', JSON.stringify(foundUser));
-    setIsLoading(false);
-    return { success: true };
-  }, []);
-
-  const logout = useCallback(() => {
+  // ------------------------------------------------------------------
+  // logout
+  // ------------------------------------------------------------------
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('sima-user');
-  }, []);
+    setProfile(null);
+    setSession(null);
+  }, [supabase]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        session,
         isLoading,
+        isAuthenticated: !!user,
         login,
         logout,
-        isAuthenticated: !!user,
       }}
     >
       {children}
@@ -69,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ---- Hook ----
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -77,13 +144,11 @@ export function useAuth() {
   return context;
 }
 
-/**
- * Helper to get the dashboard path for a given role
- */
+// ---- Helper ----
 export function getDashboardPath(role: UserRole): string {
   switch (role) {
-    case 'admin': return '/admin/dashboard';
+    case 'admin':      return '/admin/dashboard';
     case 'technician': return '/technician/dashboard';
-    case 'customer': return '/customer/dashboard';
+    case 'customer':   return '/customer/dashboard';
   }
 }

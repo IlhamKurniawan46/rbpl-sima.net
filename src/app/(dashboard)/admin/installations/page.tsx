@@ -32,7 +32,7 @@ export default function AdminInstallationsPage() {
             <ListCard
               key={ins.id}
               avatar={<div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><Wifi size={18} /></div>}
-              title={ins.customer?.user?.full_name || 'Pelanggan'}
+              title={ins.customer?.profile?.full_name || 'Pelanggan'}
               subtitle={`${ins.package?.name} · ${ins.area_code} · ${formatDateShort(ins.created_at)}`}
               trailing={<StatusBadge label={INSTALLATION_STATUS_LABELS[ins.status]} colorClass={INSTALLATION_STATUS_COLORS[ins.status]} />}
               showChevron={false}

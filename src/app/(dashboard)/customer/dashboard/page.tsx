@@ -5,16 +5,16 @@ import StatCard from '@/components/ui/StatCard';
 import ListCard from '@/components/ui/ListCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCustomerByUserId, getInvoicesForCustomer, getTicketsForCustomer, getInstallationsForCustomer } from '@/lib/mock-data';
+import { getCustomerByProfileId, getInvoicesForCustomer, getTicketsForCustomer, getInstallationsForCustomer } from '@/lib/mock-data';
 import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS, TICKET_STATUS_LABELS, TICKET_STATUS_COLORS } from '@/lib/utils/constants';
 import { formatCurrency, formatDateShort } from '@/lib/utils/formatters';
 import { Wifi, CreditCard, Ticket, Plus, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function CustomerDashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const router = useRouter();
-  const customer = user ? getCustomerByUserId(user.id) : null;
+  const customer = profile ? getCustomerByProfileId(profile.id) : null;
   const invoices = customer ? getInvoicesForCustomer(customer.id) : [];
   const tickets = customer ? getTicketsForCustomer(customer.id) : [];
   const installations = customer ? getInstallationsForCustomer(customer.id) : [];
@@ -29,7 +29,7 @@ export default function CustomerDashboard() {
       <div className="p-4 space-y-5">
         {/* Greeting */}
         <div className="animate-fade-in">
-          <h2 className="text-lg font-bold text-text-heading">Halo, {user?.full_name?.split(' ')[0]} 👋</h2>
+          <h2 className="text-lg font-bold text-text-heading">Halo, {profile?.full_name?.split(' ')[0]} 👋</h2>
           <p className="text-xs text-text-muted mt-0.5">Selamat datang kembali</p>
         </div>
 

@@ -8,7 +8,12 @@ import type {
   Installation, Ticket, Invoice, Payment, Notification,
 } from '@/lib/types/database';
 
-// ---- Users ----
+// ---------------------------------------------------------------------------
+// NOTE: This file contains MOCK DATA for UI development.
+// Replace these with real Supabase queries when wiring up each page.
+// ---------------------------------------------------------------------------
+
+// ---- Users (as Profile + optional email) ----
 export const mockUsers: User[] = [
   {
     id: 'u-admin-01',
@@ -16,7 +21,6 @@ export const mockUsers: User[] = [
     full_name: 'Ahmad Fauzi',
     role: 'admin',
     phone: '081234567890',
-    avatar_url: null,
     created_at: '2025-01-15T08:00:00Z',
   },
   {
@@ -25,7 +29,6 @@ export const mockUsers: User[] = [
     full_name: 'Budi Santoso',
     role: 'technician',
     phone: '081345678901',
-    avatar_url: null,
     created_at: '2025-02-01T08:00:00Z',
   },
   {
@@ -34,7 +37,6 @@ export const mockUsers: User[] = [
     full_name: 'Dedi Kurniawan',
     role: 'technician',
     phone: '081456789012',
-    avatar_url: null,
     created_at: '2025-02-15T08:00:00Z',
   },
   {
@@ -43,7 +45,6 @@ export const mockUsers: User[] = [
     full_name: 'Siti Rahayu',
     role: 'customer',
     phone: '081567890123',
-    avatar_url: null,
     created_at: '2025-03-01T08:00:00Z',
   },
   {
@@ -52,7 +53,6 @@ export const mockUsers: User[] = [
     full_name: 'Agus Wijaya',
     role: 'customer',
     phone: '081678901234',
-    avatar_url: null,
     created_at: '2025-03-10T08:00:00Z',
   },
   {
@@ -61,7 +61,6 @@ export const mockUsers: User[] = [
     full_name: 'Rina Marlina',
     role: 'customer',
     phone: '081789012345',
-    avatar_url: null,
     created_at: '2025-04-01T08:00:00Z',
   },
   {
@@ -70,7 +69,6 @@ export const mockUsers: User[] = [
     full_name: 'Joko Susilo',
     role: 'customer',
     phone: '081890123456',
-    avatar_url: null,
     created_at: '2025-04-15T08:00:00Z',
   },
   {
@@ -79,62 +77,71 @@ export const mockUsers: User[] = [
     full_name: 'Dewi Lestari',
     role: 'customer',
     phone: '081901234567',
-    avatar_url: null,
     created_at: '2025-05-01T08:00:00Z',
   },
 ];
 
-// ---- Customers ----
+// ---- Customers (aligned with new DB schema) ----
 export const mockCustomers: Customer[] = [
   {
     id: 'c-01',
-    user_id: 'u-cust-01',
-    address: 'Jl. Merdeka No. 45, Bandung',
-    nik: '3204012345678901',
-    area_code: 'BDG-01',
+    profile_id: 'u-cust-01',
+    managed_by: 'u-admin-01',
+    isp_id: 'pkg-02',
+    installation_address: 'Jl. Merdeka No. 45, Bandung',
+    installation_area: 'BDG-01',
     status: 'active',
-    registered_at: '2025-03-01T08:00:00Z',
-    user: mockUsers[3],
+    created_at: '2025-03-01T08:00:00Z',
+    updated_at: '2025-03-01T08:00:00Z',
+    profile: mockUsers[3],
   },
   {
     id: 'c-02',
-    user_id: 'u-cust-02',
-    address: 'Jl. Sudirman No. 12, Jakarta Selatan',
-    nik: '3174012345678902',
-    area_code: 'JKT-02',
+    profile_id: 'u-cust-02',
+    managed_by: 'u-admin-01',
+    isp_id: 'pkg-03',
+    installation_address: 'Jl. Sudirman No. 12, Jakarta Selatan',
+    installation_area: 'JKT-02',
     status: 'active',
-    registered_at: '2025-03-10T08:00:00Z',
-    user: mockUsers[4],
+    created_at: '2025-03-10T08:00:00Z',
+    updated_at: '2025-03-10T08:00:00Z',
+    profile: mockUsers[4],
   },
   {
     id: 'c-03',
-    user_id: 'u-cust-03',
-    address: 'Jl. Diponegoro No. 78, Surabaya',
-    nik: '3578012345678903',
-    area_code: 'SBY-01',
+    profile_id: 'u-cust-03',
+    managed_by: 'u-admin-01',
+    isp_id: 'pkg-01',
+    installation_address: 'Jl. Diponegoro No. 78, Surabaya',
+    installation_area: 'SBY-01',
     status: 'active',
-    registered_at: '2025-04-01T08:00:00Z',
-    user: mockUsers[5],
+    created_at: '2025-04-01T08:00:00Z',
+    updated_at: '2025-04-01T08:00:00Z',
+    profile: mockUsers[5],
   },
   {
     id: 'c-04',
-    user_id: 'u-cust-04',
-    address: 'Jl. Gatot Subroto No. 33, Semarang',
-    nik: '3374012345678904',
-    area_code: 'SMG-01',
+    profile_id: 'u-cust-04',
+    managed_by: 'u-admin-01',
+    isp_id: 'pkg-02',
+    installation_address: 'Jl. Gatot Subroto No. 33, Semarang',
+    installation_area: 'SMG-01',
     status: 'pending',
-    registered_at: '2025-04-15T08:00:00Z',
-    user: mockUsers[6],
+    created_at: '2025-04-15T08:00:00Z',
+    updated_at: '2025-04-15T08:00:00Z',
+    profile: mockUsers[6],
   },
   {
     id: 'c-05',
-    user_id: 'u-cust-05',
-    address: 'Jl. Ahmad Yani No. 56, Yogyakarta',
-    nik: '3471012345678905',
-    area_code: 'YOG-01',
+    profile_id: 'u-cust-05',
+    managed_by: 'u-admin-01',
+    isp_id: 'pkg-01',
+    installation_address: 'Jl. Ahmad Yani No. 56, Yogyakarta',
+    installation_area: 'YOG-01',
     status: 'inactive',
-    registered_at: '2025-05-01T08:00:00Z',
-    user: mockUsers[7],
+    created_at: '2025-05-01T08:00:00Z',
+    updated_at: '2025-05-01T08:00:00Z',
+    profile: mockUsers[7],
   },
 ];
 
@@ -489,8 +496,13 @@ export const mockNotifications: Notification[] = [
 
 // ---- Helper: Get data for specific user ----
 
+export function getCustomerByProfileId(profileId: string): Customer | undefined {
+  return mockCustomers.find(c => c.profile_id === profileId);
+}
+
+/** @deprecated Use getCustomerByProfileId instead */
 export function getCustomerByUserId(userId: string): Customer | undefined {
-  return mockCustomers.find(c => c.user_id === userId);
+  return getCustomerByProfileId(userId);
 }
 
 export function getTechnicianByUserId(userId: string): Technician | undefined {

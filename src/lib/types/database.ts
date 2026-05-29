@@ -27,26 +27,37 @@ export type PackageStatus = 'active' | 'discontinued';
 
 // ---- Table Interfaces ----
 
-export interface User {
-  id: string;
-  email: string;
+/**
+ * Mirrors public.profiles (extends auth.users).
+ * This is what AuthContext fetches after sign-in.
+ */
+export interface Profile {
+  id: string;          // same UUID as auth.users.id
   full_name: string;
-  role: UserRole;
   phone: string | null;
-  avatar_url: string | null;
+  role: UserRole;
   created_at: string;
 }
 
+/**
+ * Convenience alias: components that need the auth user
+ * shape can use this to reference full_name + role together.
+ */
+export type User = Profile & { email?: string };
+
 export interface Customer {
   id: string;
-  user_id: string;
-  address: string;
-  nik: string;
-  area_code: string;
+  profile_id: string;          // FK → profiles.id
+  managed_by: string | null;   // FK → profiles.id (admin who manages this customer)
+  isp_id: string;              // FK → isps.id
+  installation_address: string;
+  installation_area: string | null;
   status: CustomerStatus;
-  registered_at: string;
+  created_at: string;
+  updated_at: string;
   // Joined fields
-  user?: User;
+  profile?: Profile;
+  managed_by_profile?: Profile;
 }
 
 export interface Technician {

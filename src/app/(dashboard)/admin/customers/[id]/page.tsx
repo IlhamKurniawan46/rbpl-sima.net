@@ -24,14 +24,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         {/* Profile Card */}
         <div className="bg-white rounded-2xl p-5 shadow-[var(--shadow-card)] border border-border-light text-center">
           <div className="w-16 h-16 rounded-full bg-maroon-100 text-maroon-600 flex items-center justify-center text-xl font-bold mx-auto mb-3">
-            {getInitials(customer.user?.full_name || '')}
+            {getInitials(customer.profile?.full_name || '')}
           </div>
-          <h2 className="text-lg font-bold text-text-heading">{customer.user?.full_name}</h2>
+          <h2 className="text-lg font-bold text-text-heading">{customer.profile?.full_name}</h2>
           <StatusBadge label={CUSTOMER_STATUS_LABELS[customer.status]} colorClass={CUSTOMER_STATUS_COLORS[customer.status]} size="md" />
           <div className="mt-4 space-y-2 text-left">
-            <div className="flex items-center gap-2 text-sm text-text-muted"><Mail size={14} /> {customer.user?.email}</div>
-            <div className="flex items-center gap-2 text-sm text-text-muted"><Phone size={14} /> {customer.user?.phone}</div>
-            <div className="flex items-center gap-2 text-sm text-text-muted"><MapPin size={14} /> {customer.address}</div>
+            <div className="flex items-center gap-2 text-sm text-text-muted"><Mail size={14} /> {customer.profile?.phone ? `${customer.profile.full_name.toLowerCase().replace(/\s+/g, '')}@example.com` : 'email@example.com'}</div>
+            <div className="flex items-center gap-2 text-sm text-text-muted"><Phone size={14} /> {customer.profile?.phone}</div>
+            <div className="flex items-center gap-2 text-sm text-text-muted"><MapPin size={14} /> {customer.installation_address}</div>
           </div>
           <div className="mt-3 pt-3 border-t border-border-light grid grid-cols-2 gap-2 text-center">
             <div><p className="text-lg font-bold text-text-heading">{invoices.length}</p><p className="text-[10px] text-text-muted">Tagihan</p></div>

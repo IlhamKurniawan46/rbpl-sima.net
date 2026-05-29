@@ -7,13 +7,13 @@ import { useEffect } from 'react';
 
 export default function SplashPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { profile, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      router.replace(getDashboardPath(user.role));
+    if (!isLoading && isAuthenticated && profile) {
+      router.replace(getDashboardPath(profile.role));
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, profile, isLoading, router]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -63,15 +63,6 @@ export default function SplashPage() {
           Daftar Akun Baru
         </button>
 
-        {/* Demo credentials hint */}
-        <div className="mt-4 p-3 bg-gold-50 border border-gold-200 rounded-xl">
-          <p className="text-[11px] text-gold-700 font-semibold text-center mb-1">🔑 Demo Login</p>
-          <div className="text-[10px] text-gold-600 space-y-0.5 text-center">
-            <p>Admin: admin@simanet.id / admin123</p>
-            <p>Teknisi: budi.tech@simanet.id / tech123</p>
-            <p>Pelanggan: siti.rahayu@gmail.com / cust123</p>
-          </div>
-        </div>
       </div>
     </div>
   );

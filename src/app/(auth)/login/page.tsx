@@ -8,7 +8,7 @@ import ActionButton from '@/components/ui/ActionButton';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, profile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -19,10 +19,31 @@ export default function LoginPage() {
     setError('');
     const result = await login(email, password);
     if (result.success) {
-      const user = JSON.parse(localStorage.getItem('sima-user') || '{}');
-      router.replace(getDashboardPath(user.role));
+      // In case onAuthStateChange has not fired yet, we fetch/use profile or wait a brief moment.
+      // But since useAuth stores the session and profile, let's fetch it or use the context helper.
+      // The context has getDashboardPath helper. Let's redirect dynamically.
+      // We can also query profiles table directly to be robust in the component.
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profileError && profileData) {
+          router.replace(getDashboardPath(profileData.role));
+          return;
+        }
+      }
+      
+      // Fallback if profile is not fully fetched yet
+      router.replace('/');
     } else {
-      setError(result.error || 'Login gagal');
+      setError(result.error || 'Login gagal. Silakan periksa kembali email dan password Anda.');
     }
   };
 
