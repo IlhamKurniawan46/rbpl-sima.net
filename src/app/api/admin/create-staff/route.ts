@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, full_name, role } = await request.json();
+    const { email, password, full_name, phone, role } = await request.json();
 
     if (!email || !password || !full_name || !role) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       email_confirm: true,
       user_metadata: {
         full_name: full_name,
+        phone: phone || null,
       }
     });
 
@@ -48,7 +49,8 @@ export async function POST(request: Request) {
       .upsert({
         id: authData.user.id,
         role: role,
-        full_name: full_name
+        full_name: full_name,
+        phone: phone || null
       });
 
     if (profileError) {

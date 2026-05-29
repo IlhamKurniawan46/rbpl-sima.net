@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 export default function CreateStaffPage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'technician' });
+  const [form, setForm] = useState({ fullName: '', phone: '', email: '', password: '', role: 'technician' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ export default function CreateStaffPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (form.password.length < 6) {
       setError('Password minimal harus 6 karakter');
       return;
@@ -35,6 +35,7 @@ export default function CreateStaffPage() {
           email: form.email,
           password: form.password,
           full_name: form.fullName,
+          phone: form.phone,
           role: form.role
         })
       });
@@ -46,7 +47,7 @@ export default function CreateStaffPage() {
       }
 
       showToast('Akun staff berhasil dibuat!', 'success');
-      setForm({ fullName: '', email: '', password: '', role: 'technician' });
+      setForm({ fullName: '', phone: '', email: '', password: '', role: 'technician' });
       router.push('/admin/technicians');
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan sistem');
@@ -91,12 +92,24 @@ export default function CreateStaffPage() {
             </div>
 
             <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-text-primary">Nomor Telepon</label>
+              <input
+                type="text"
+                value={form.phone}
+                onChange={(e) => update('phone', e.target.value)}
+                placeholder="Nomor telepon"
+                required
+                className="w-full h-11 px-3.5 text-sm bg-white border border-border rounded-xl outline-none focus:border-maroon-500 focus:ring-2 focus:ring-maroon-100 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-text-primary">Email Staff</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => update('email', e.target.value)}
-                placeholder="staff@email.com"
+                placeholder="staff@simanet.id"
                 required
                 className="w-full h-11 px-3.5 text-sm bg-white border border-border rounded-xl outline-none focus:border-maroon-500 focus:ring-2 focus:ring-maroon-100 transition-colors"
               />
