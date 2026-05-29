@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import { formatCurrency } from '@/lib/utils/formatters';
-import { Wifi, Zap, Plus, X } from 'lucide-react';
+import { Wifi, Zap, Plus, X, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import ActionButton from '@/components/ui/ActionButton';
 import { useToast } from '@/components/ui/Toast';
@@ -91,6 +91,35 @@ export default function AdminPackagesPage() {
     }
   };
 
+  const handleDeletePackage = async (id: string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus paket "${name}"?`)) {
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error: deleteError } = await supabase
+        .from('isps')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
+
+      showToast(`Paket "${name}" berhasil dihapus!`, 'success');
+      // Optimistically filter the state to instantly update the UI without waiting for re-fetch
+      setPackages((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting package:', err);
+      let errorMsg = 'Gagal menghapus paket internet.';
+      if (err.code === '23503') {
+        errorMsg = `Gagal menghapus paket "${name}". Paket ini sedang digunakan oleh satu atau beberapa pelanggan.`;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      showToast(errorMsg, 'error');
+    }
+  };
+
   return (
     <>
       <TopBar 
@@ -128,15 +157,22 @@ export default function AdminPackagesPage() {
           packages.map((pkg) => (
             <div key={pkg.id} className="bg-white rounded-2xl p-4 shadow-[var(--shadow-card)] border border-border-light">
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-maroon-50 text-maroon-600 flex items-center justify-center">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-maroon-50 text-maroon-600 flex items-center justify-center flex-shrink-0">
                     <Wifi size={20} />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-text-heading">{pkg.name}</p>
-                    <p className="text-xs text-text-muted">{pkg.description || 'Tidak ada deskripsi'}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-text-heading truncate">{pkg.name}</p>
+                    <p className="text-xs text-text-muted line-clamp-2">{pkg.description || 'Tidak ada deskripsi'}</p>
                   </div>
                 </div>
+                <button
+                  onClick={() => handleDeletePackage(pkg.id, pkg.name)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-red-600 hover:bg-red-50 transition-colors ml-2 flex-shrink-0"
+                  title="Hapus Paket"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border-light">
                 <div className="flex items-center gap-1.5 text-text-muted">
