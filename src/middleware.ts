@@ -7,6 +7,20 @@ const PROTECTED_PREFIXES = ['/admin', '/technician', '/customer'];
 // Routes only accessible when NOT logged-in
 const AUTH_ONLY_ROUTES = ['/login', '/register'];
 
+const ADMIN_API_PREFIX = '/api/admin';
+
+const ROLE_BY_PREFIX: Record<string, string> = {
+  '/admin': 'admin',
+  '/technician': 'technician',
+  '/customer': 'customer',
+};
+
+const DASHBOARD_BY_ROLE: Record<string, string> = {
+  admin: '/admin/dashboard',
+  technician: '/technician/dashboard',
+  customer: '/customer/dashboard',
+};
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -38,6 +52,25 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // [K-08] Protect admin API routes
+  if (pathname.startsWith(ADMIN_API_PREFIX)) {
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    return supabaseResponse;
+  }
+
   // 1. If authenticated and visiting auth-only pages, redirect to dashboard depending on role
   if (user && (AUTH_ONLY_ROUTES.some((r) => pathname.startsWith(r)) || pathname === '/')) {
     const { data: profile } = await supabase
@@ -59,6 +92,21 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // [K-01] Redirect authenticated users accessing mismatched role dashboards
+  const matchedPrefix = PROTECTED_PREFIXES.find((r) => pathname.startsWith(r));
+  if (user && matchedPrefix) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = profile?.role;
+    if (role && role !== ROLE_BY_PREFIX[matchedPrefix] && DASHBOARD_BY_ROLE[role]) {
+      return NextResponse.redirect(new URL(DASHBOARD_BY_ROLE[role], request.url));
+    }
   }
 
   return supabaseResponse;
